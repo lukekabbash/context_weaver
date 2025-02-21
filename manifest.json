@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "Context Weaver - v1.0",
-    "version": "1.0",
-    "description": "AI-Powered Text Transformation Companion - Simply highlight text to chat in browser with GPT, DeepSeek, or Grok!",
+    "name": "Context Weaver",
+    "version": "2.0.0",
+    "description": "AI-Powered Web Companion - Simply highlight text to chat in browser with GPT, DeepSeek, or Grok!",
     "permissions": ["storage"],
     "action": {
         "default_popup": "popup/popup.html",
