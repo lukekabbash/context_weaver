@@ -2,51 +2,81 @@
 <html>
 <head>
     <link rel="stylesheet" href="popup.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
 <body>
     <div class="popup-container">
-        <h1>Context Weaver</h1>
+        <div class="header">
+            <div class="title-container">
+                <img src="/icons/icon128.png" alt="Context Weaver">
+                <h1>Context Weaver</h1>
+            </div>
+            <button id="theme-toggle" class="icon-button" title="Toggle theme">
+                <span class="material-icons-round">dark_mode</span>
+            </button>
+        </div>
+        
         <p class="options-hint"><i>Weaver online. Add or remove API keys in plugin options.</i></p>
-        <textarea id="text-input" placeholder="Highlight text to weave. You can also edit/input manually..."></textarea>
-
-        <div class="dropdown-section">
-            <label for="model-select">AI Model:</label>
-            <select id="model-select">
-                <option value="gpt-4o-mini-2024-07-18">4o mini (OpenAI)</option>
-                <option value="o1-mini-2024-09-12">o1 mini (OpenAI)</option>
-                <option value="grok-2">Grok-2 (xAI)</option>
-                <option value="deepseek-chat">V3 Chat (DeepSeek)</option>
-                <option value="deepseek-reasoner">R1 Reasoner (DeepSeek)</option>
-            </select>
+        
+        <div class="input-container">
+            <textarea id="text-input" placeholder="Highlight text to weave. You can also edit/input manually..."></textarea>
+            <div class="input-footer">
+                <span id="char-count">0 characters</span>
+                <span id="token-estimate">~0 tokens</span>
+            </div>
         </div>
 
-        <div class="dropdown-section">
-            <label for="personality-select">Archetype:</label>
-            <select id="personality-select">
-                <option value="None" class="placeholder-option">Select Archetype</option>
-                <option value="Summarizer">Summarizer</option>
-                <option value="Notetaker">Notetaker</option>
-                <option value="Formalizer">Formalizer</option>
-                <option value="Explain Code">Explain Code</option>
-                <option value="Explain Like I'm 5">Explain Like I'm 5 (ELI5)</option>
-                <option value="Socratic Seminar Lead">Socratic Seminar Lead</option>
-                <option value="LinkedInese">LinkedInese</option>
-                <option value="Reply Guy">Reply Guy</option>  <!-- NEW: Reply Guy Archetype Option -->
-                <option value="Schizophrenic Tweeter">Schizophrenic Tweeter</option>
-            </select>
+        <div class="controls-container">
+            <div class="dropdown-section">
+                <label for="model-select">AI Model:</label>
+                <div class="select-wrapper">
+                    <select id="model-select">
+                        <option value="gpt-4o-mini-2024-07-18">4o mini (OpenAI)</option>
+                        <option value="o1-mini-2024-09-12">o1 mini (OpenAI)</option>
+                        <option value="grok-2">Grok-2 (xAI)</option>
+                        <option value="deepseek-chat">V3 Chat (DeepSeek)</option>
+                        <option value="deepseek-reasoner">R1 Reasoner (DeepSeek)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="dropdown-section">
+                <label for="personality-select">Archetype:</label>
+                <div class="select-wrapper">
+                    <select id="personality-select">
+                        <option value="None" class="placeholder-option">Select Archetype</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
-        <button id="send-button">WEAVE</button>
+        <button id="send-button" class="primary-button">
+            <span class="button-text">WEAVE</span>
+            <div class="loading-spinner"></div>
+        </button>
 
         <div class="output-section">
             <div class="output-header">
-                <label id="output-label" for="response"></label>
-                <button id="copy-button" title="Copy to clipboard">Copy</button>
+                <label id="output-label" for="response">
+                    <span class="material-icons-round">psychology</span>
+                    <span class="model-name">AI Output:</span>
+                </label>
+                <div class="output-actions">
+                    <button id="clear-button" class="icon-button" title="Clear output">
+                        <span class="material-icons-round">clear</span>
+                    </button>
+                    <button id="copy-button" class="icon-button" title="Copy to clipboard">
+                        <span class="material-icons-round">content_copy</span>
+                    </button>
+                </div>
             </div>
-            <div id="response"></div>
+            <div id="response" class="response-container"></div>
+            <div class="output-footer">
+                <span id="output-char-count">0 characters</span>
+                <span id="output-token-count">~0 tokens</span>
+            </div>
         </div>
-
     </div>
     <script src="popup.js"></script>
 </body>

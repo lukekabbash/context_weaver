@@ -2,54 +2,179 @@
 <html>
 <head>
     <link rel="stylesheet" href="options.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
 <body>
     <div class="options-container">
-        <h1>Context Weaver - Options</h1>
-
-        <p class="description">
-            Context Weaver enhances your browsing experience by allowing you to transform text using powerful AI models. First, you will need to input your generative AI API key(s),
-            and reload the extension.
-            Then, open a new tab, highlight some text, and open the extension popup. Choose a transformation archetype and an AI model, and click "Weave".
-            The transformed text will appear in the popup, ready for you to use.  Enter your API keys below to enable AI processing.
-        </p>
-
-        <div class="api-key-section">
-            <h2>API Key Configuration</h2>
-            <label for="openai-api-key">OpenAI API Key (GPT):</label>
-            <input type="password" id="openai-api-key" placeholder="OpenAI API Key">
+        <div class="header">
+            <img src="/icons/icon128.png" alt="Context Weaver" class="header-icon">
+            <h1>Context Weaver - Options</h1>
+            <button id="theme-toggle" class="icon-button" title="Toggle theme">
+                <span class="material-icons-round">dark_mode</span>
+            </button>
         </div>
 
-        <div class="api-key-section">
-            <label for="deepseek-api-key">DeepSeek API Key (V3 & R1):</label>
-            <input type="password" id="deepseek-api-key" placeholder="DeepSeek API Key">
+        <div class="tabs">
+            <button class="tab-button active" data-tab="archetypes">
+                <span class="material-icons-round">psychology</span>
+                Edit Archetypes
+            </button>
+            <button class="tab-button" data-tab="api-keys">
+                <span class="material-icons-round">key</span>
+                Configure API Keys
+            </button>
+            <button class="tab-button" data-tab="chat">
+                <span class="material-icons-round">chat</span>
+                Continue Chat
+            </button>
         </div>
 
-        <div class="api-key-section">
-            <label for="grok-api-key">xAI API Key (Grok):</label>
-            <input type="password" id="grok-api-key" placeholder="Grok API Key">
+        <div id="archetypes-tab" class="tab-content active">
+            <div class="description-card">
+                <h2>Customize Your AI Archetypes</h2>
+                <p>Archetypes are predefined personalities or instruction sets that guide how the AI processes and transforms your text. Each archetype has a specific purpose, whether it's summarizing content, taking notes, or changing the writing style.</p>
+                <p>In this section, you can:</p>
+                <ul>
+                    <li>Create new archetypes with custom instructions</li>
+                    <li>Edit existing archetypes to refine their behavior</li>
+                    <li>Use the AI-powered enhancement feature to improve archetype prompts</li>
+                    <li>Toggle visibility of archetypes in the popup menu</li>
+                    <li>Duplicate and rename archetypes for variations</li>
+                </ul>
+                <p>Click on any archetype name to edit its instructions, or use the buttons to manage visibility and organization.</p>
+            </div>
+            
+            <div class="section">
+                <div class="archetypes-section">
+                    <div class="archetypes-list">
+                        <!-- Archetypes will be added here dynamically -->
+                    </div>
+                    
+                    <div class="add-archetype">
+                        <input type="text" id="new-archetype" placeholder="Enter new archetype name">
+                        <button class="icon-button" id="add-archetype-button" title="Add archetype">
+                            <span class="material-icons-round">add</span>
+                        </button>
+                    </div>
+
+                    <div id="archetype-editor" class="archetype-editor hidden">
+                        <div class="editor-header">
+                            <h3>Edit Archetype:</h3>
+                            <div id="editing-archetype-name"></div>
+                        </div>
+                        <textarea id="archetype-prompt" placeholder="Enter the prompt template for this archetype..."></textarea>
+                        <div class="editor-buttons">
+                            <div class="button-group">
+                                <button id="enhance-archetype" class="icon-button">
+                                    <span class="material-icons-round">auto_fix_high</span>
+                                    Enhance with AI
+                                </button>
+                                <select id="enhance-style" class="select-dropdown">
+                                    <option value="hone">Hone In</option>
+                                    <option value="flesh">Flesh Out</option>
+                                </select>
+                                <select id="enhance-model" class="select-dropdown">
+                                    <option value="">Select Model</option>
+                                </select>
+                            </div>
+                            <div class="button-group">
+                                <button id="cancel-edit" class="icon-button">
+                                    <span class="material-icons-round">close</span>
+                                    Cancel
+                                </button>
+                                <button id="save-archetype" class="icon-button">
+                                    <span class="material-icons-round">save</span>
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <button id="save-keys-button">Save Keys</button>
+        <div id="api-keys-tab" class="tab-content">
+            <div class="description-card">
+                <h2>Configure AI Model Access</h2>
+                <p>Context Weaver supports multiple AI models to provide you with flexibility and choice in how your text is processed. To use these models, you'll need to provide their respective API keys.</p>
+                <p>Get your API keys from the respective AI model providers:</p>
+                <ul>
+                    <li><a href="https://platform.openai.com/account/api-keys" target="_blank">OpenAI</a> - For GPT-4o mini and o1-mini models</li>
+                    <li><a href="https://platform.deepseek.ai" target="_blank">DeepSeek</a> - For DeepSeek's V3 Chat and R1 Reasoner models</li>
+                    <li><a href="https://x.ai" target="_blank">xAI</a> - For Grok 2 access</li>
+                </ul>
+                <p>Your API keys are stored in your browser's sync storage and are only used to authenticate requests to the respective AI services. Context Weaver does not collect or transmit your API keys to any other services. See warning for details.</p>
+            </div>
+            
+            <div class="section">
+                <p class="description">
+                    Configure your API keys to enable AI processing. Context Weaver supports multiple AI providers for maximum flexibility.
+                </p>
 
-        <p class="api-links-text">
-            Get your API keys from the respective AI model providers:
-            <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a>,
-            <a href="https://platform.deepseek.com/developer/apikey" target="_blank">DeepSeek</a>, and
-            <a href="https://x.ai/api" target="_blank">xAI</a>.
-        </p>
+                <div class="api-key-section">
+                    <label for="openai-api-key">OpenAI API Key (GPT):</label>
+                    <input type="password" id="openai-api-key" placeholder="OpenAI API Key">
+                </div>
+
+                <div class="api-key-section">
+                    <label for="deepseek-api-key">DeepSeek API Key (V3 & R1):</label>
+                    <input type="password" id="deepseek-api-key" placeholder="DeepSeek API Key">
+                </div>
+
+                <div class="api-key-section">
+                    <label for="grok-api-key">xAI API Key (Grok):</label>
+                    <input type="password" id="grok-api-key" placeholder="Grok API Key">
+                </div>
+
+                <button id="save-keys-button" class="primary-button">
+                    <span class="material-icons-round">save</span>
+                    Save Keys
+                </button>
+
+                <p class="warning-text">
+                    <b>WARNING:</b> Input API keys at your own risk. Context Weaver is not responsible for your API key security. API keys are stored locally in chrome.storage.sync. Context Weaver itself collects no data, but that does not make this extension secure. Be aware of the Terms of Service and Privacy Policy of the assorted AI services Context Weaver integrates with.
+                </p>
+            </div>
+        </div>
+
+        <div id="chat-tab" class="tab-content">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="model-selector">
+                        <label for="chat-model-select">Model:</label>
+                        <select id="chat-model-select" class="select-dropdown"></select>
+                    </div>
+                    <div class="archetype-selector">
+                        <label for="chat-archetype-select">Select Archetype:</label>
+                        <select id="chat-archetype-select" class="select-dropdown">
+                            <option value="None">No Archetype Selected</option>
+                        </select>
+                    </div>
+                    <button id="clear-chat" class="icon-button delete-button" title="Clear chat">
+                        <span class="material-icons-round">delete_sweep</span>
+                    </button>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    <!-- Messages will be inserted here -->
+                </div>
+
+                <div class="chat-input-container">
+                    <textarea id="chat-input" placeholder="Type your message..." rows="1"></textarea>
+                    <button id="send-chat" class="primary-button">
+                        <span class="material-icons-round">send</span>
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <p class="attribution-text">
             By: Luke Kabbash (<a href="https://x.com/LukeKabbash" target="_blank">@LukeKabbash</a> on X)
         </p>
-
-        <p class="warning-text">
-            <b>WARNING:</b> Input API keys at your own risk. Context Weaver is not responsible for your API key security. API keys are stored locally in chrome.storage.sync. Context Weaver itself collects no data, but that does not make this extension secure. Be aware of the Terms of Service and Privacy Policy of the assorted AI services Context Weaver integrates with.
-        </p>
-
     </div>
 
     <script src="options.js"></script>
+    <script src="chatbot.js"></script>
 </body>
 </html>
