@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="popup.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="popup-container">
+        <h1>Context Weaver</h1>
+        <p class="options-hint"><i>Weaver online. Add or remove API keys in plugin options.</i></p>
+        <textarea id="text-input" placeholder="Highlight text to weave. You can also edit/input manually..."></textarea>
+
+        <div class="dropdown-section">
+            <label for="model-select">AI Model:</label>
+            <select id="model-select">
+                <option value="gpt-4o-mini-2024-07-18">4o mini (OpenAI)</option>
+                <option value="o1-mini-2024-09-12">o1 mini (OpenAI)</option>
+                <option value="grok-2">Grok-2 (xAI)</option>
+                <option value="deepseek-chat">V3 Chat (DeepSeek)</option>
+                <option value="deepseek-reasoner">R1 Reasoner (DeepSeek)</option>
+            </select>
+        </div>
+
+        <div class="dropdown-section">
+            <label for="personality-select">Archetype:</label>
+            <select id="personality-select">
+                <option value="None" class="placeholder-option">Select Archetype</option>
+                <option value="Summarizer">Summarizer</option>
+                <option value="Notetaker">Notetaker</option>
+                <option value="Formalizer">Formalizer</option>
+                <option value="Explain Code">Explain Code</option>
+                <option value="Explain Like I'm 5">Explain Like I'm 5 (ELI5)</option>
+                <option value="Socratic Seminar Lead">Socratic Seminar Lead</option>
+                <option value="LinkedInese">LinkedInese</option>
+                <option value="Reply Guy">Reply Guy</option>  <!-- NEW: Reply Guy Archetype Option -->
+                <option value="Schizophrenic Tweeter">Schizophrenic Tweeter</option>
+            </select>
+        </div>
+
+        <button id="send-button">WEAVE</button>
+
+        <div class="output-section">
+            <div class="output-header">
+                <label id="output-label" for="response"></label>
+                <button id="copy-button" title="Copy to clipboard">Copy</button>
+            </div>
+            <div id="response"></div>
+        </div>
+
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

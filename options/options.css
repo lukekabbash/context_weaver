@@ -1,0 +1,122 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Roboto Mono', monospace, system-ui;
+    background-color: #1e293b;
+    color: #d1d5db;
+}
+
+.options-container {
+    width: 500px;
+    padding: 30px;
+    margin: 20px auto;
+    background-color: #29374d;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+}
+
+h1 {
+    color: #f0f0f0;
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 1.8em;
+}
+
+.description {
+    color: #9ca3af;
+    margin-bottom: 25px;
+    line-height: 1.6;
+}
+
+.api-key-section {
+    margin-bottom: 20px;
+}
+
+.api-key-section h2 {
+    color: #f0f0f0;
+    margin-bottom: 15px;
+}
+
+.api-key-section label {
+    display: block;
+    margin-bottom: 8px;
+    color: #f0f0f0;
+    font-weight: bold;
+}
+
+.api-key-section input[type="password"] {
+    width: 100%;
+    padding: 10px; /* Standard padding */
+    padding-top: 8px; /* Slightly reduced top padding for visual symmetry */
+    padding-bottom: 8px; /* Slightly reduced bottom padding for visual symmetry */
+    border: 1px solid #4b5563;
+    border-radius: 4px;
+    background-color: #334155;
+    color: #f9fafb;
+    font-family: 'Roboto Mono', monospace;
+    box-sizing: border-box; /* Ensure consistent sizing */
+}
+
+button {
+    padding: 12px 25px;
+    background-color: #64748b;
+    color: #f0f0f0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1em;
+    transition: background-color 0.2s ease;
+}
+
+button:hover {
+    background-color: #4a5568;
+}
+
+.api-links-text {
+    color: #9ca3af;
+    margin-top: 20px;
+    line-height: 1.5;
+    font-size: 0.9em;
+}
+
+.api-links-text a {
+    color: #8ab4f4;
+    text-decoration: none;
+}
+
+.api-links-text a:hover {
+    text-decoration: underline;
+}
+
+.warning-text {
+    color: #ffcdd2; /* Light red for warning text */
+    background-color: #5c2d2e; /* Darker red background for warning box */
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 20px;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.warning-text b {
+    color: #ff8a80; /* Slightly brighter red for "WARNING" */
+}
+
+
+.attribution-text {
+    color: #9ca3af;
+    margin-top: 25px;
+    font-size: 0.85em;
+    text-align: left; /* Changed to left align attribution */
+}
+
+.attribution-text a {
+    color: #8ab4f4;
+    text-decoration: none;
+}
+
+.attribution-text a:hover {
+    text-decoration: underline;
+}
