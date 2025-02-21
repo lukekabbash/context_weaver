@@ -312,7 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.action === "getText" && request.text) {
             popupState.inputText = request.text;
+            // Clear output when new text is highlighted
             popupState.outputText = "";
+            responseDiv.innerHTML = '';
+            updateOutputCounts('');
             saveState();
             applyStateToUI();
         }
@@ -324,17 +327,21 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.sendMessage({ action: "getText" }, (response) => {
         if (response && response.text) {
             popupState.inputText = response.text;
+            // Clear output when new text is loaded
+            popupState.outputText = "";
+            responseDiv.innerHTML = '';
+            updateOutputCounts('');
             saveState();
             applyStateToUI();
         }
     });
 
-    chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey', 'googleApiKey'], (result) => {
+    // Check API keys and initialize models
+    chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey'], (result) => {
         const openaiApiKeyPresent = !!result.openaiApiKey;
         const deepseekApiKeyPresent = !!result.deepseekApiKey;
         const grokApiKeyPresent = !!result.grokApiKey;
-        const googleApiKeyPresent = !!result.googleApiKey;
-        apiKeysConfigured = openaiApiKeyPresent || deepseekApiKeyPresent || grokApiKeyPresent || googleApiKeyPresent;
+        apiKeysConfigured = openaiApiKeyPresent || deepseekApiKeyPresent || grokApiKeyPresent;
 
         if (apiKeysConfigured) {
             optionsHint.textContent = 'Weaver online. Add or remove API keys in plugin options.';
@@ -344,25 +351,19 @@ document.addEventListener('DOMContentLoaded', () => {
             chrome.runtime.sendMessage({ action: "getModelList" }, (response) => {
                 if (response && response.models && response.models.length > 0) {
                     const sortedModels = [...response.models].sort((a, b) => {
-                        const order = ['OpenAI', 'Grok', 'DeepSeek', 'Google'];
+                        const order = ['OpenAI', 'Grok', 'DeepSeek'];
                         const aBrand = a.name.includes('OpenAI') ? 'OpenAI' : 
                                      (a.name.includes('DeepSeek') ? 'DeepSeek' : 
-                                     (a.name.includes('Grok') ? 'Grok' : 
-                                     (a.name.includes('Google') ? 'Google' : 'Other')));
+                                     (a.name.includes('Grok') ? 'Grok' : 'Other'));
                         const bBrand = b.name.includes('OpenAI') ? 'OpenAI' : 
                                      (b.name.includes('DeepSeek') ? 'DeepSeek' : 
-                                     (b.name.includes('Grok') ? 'Grok' : 
-                                     (b.name.includes('Google') ? 'Google' : 'Other')));
+                                     (b.name.includes('Grok') ? 'Grok' : 'Other'));
                         return order.indexOf(aBrand) - order.indexOf(bBrand);
                     });
 
-                    modelSelect.innerHTML = '';
-                    sortedModels.forEach(model => {
-                        const option = document.createElement('option');
-                        option.value = model.value;
-                        option.textContent = model.name;
-                        modelSelect.appendChild(option);
-                    });
+                    modelSelect.innerHTML = sortedModels
+                        .map(model => `<option value="${model.value}">${model.name}</option>`)
+                        .join('');
 
                     chrome.storage.local.get(['selectedModel'], (data) => {
                         if (data.selectedModel && sortedModels.some(model => model.value === data.selectedModel)) {

@@ -43,38 +43,19 @@ class ChatBot {
         }
     }
 
-    async sendMessage(content) {
+    async sendMessage(content, isRegeneration = false) {
         if (!content.trim()) return;
 
-        // Add user message
-        this.messages.push({
-            role: 'user',
-            content: content,
-            timestamp: Date.now()
-        });
-
-        // Save immediately
-        await this.saveHistory();
-        
-        // Trigger UI update
-        document.dispatchEvent(new CustomEvent('chatUpdated'));
-
-        // Prepare messages array for API
-        const apiMessages = [];
-        if (this.systemPrompt) {
-            apiMessages.push({
-                role: 'developer',
-                content: this.systemPrompt
+        // Add user message only if this is not a regeneration
+        if (!isRegeneration) {
+            this.messages.push({
+                role: 'user',
+                content: content,
+                timestamp: Date.now()
             });
+            await this.saveHistory();
+            document.dispatchEvent(new CustomEvent('chatUpdated'));
         }
-        
-        // Add all conversation history
-        this.messages.forEach(msg => {
-            apiMessages.push({
-                role: msg.role === 'user' ? 'user' : 'assistant',
-                content: msg.content
-            });
-        });
 
         try {
             // Cleanup any existing port
@@ -144,11 +125,12 @@ class ChatBot {
 
     async regenerateMessage(index) {
         if (index >= 0 && index < this.messages.length && this.messages[index].role === 'assistant') {
-            // Remove the message and all subsequent messages
+            const userMessage = this.messages[index - 1];
+            // Remove the assistant's response and all subsequent messages
             this.messages = this.messages.slice(0, index);
             await this.saveHistory();
-            // Trigger a new message generation
-            await this.sendMessage(this.messages[index - 1].content);
+            // Trigger a new message generation using the previous user message
+            await this.sendMessage(userMessage.content, true);
         }
     }
 

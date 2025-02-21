@@ -2,17 +2,15 @@ let highlightedText = '';
 let openaiApiKey = '';
 let deepseekApiKey = '';
 let grokApiKey = '';
-let googleApiKey = ''; // REMOVED: Google AI API Key variable (no longer needed)
 let availableModels = [];
 let activeConnections = new Map();
 
 // Function to load API keys from storage and generate available model list
 function loadApiKeysAndGenerateModelList() {
-    chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey', 'googleApiKey'], (result) => { // REMOVED: googleApiKey from storage get
+    chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey'], (result) => {
         openaiApiKey = result.openaiApiKey || '';
         deepseekApiKey = result.deepseekApiKey || '';
         grokApiKey = result.grokApiKey || '';
-        googleApiKey = ''; // REMOVED: googleApiKey = result.googleApiKey || '';  <- No longer load Google API Key
 
         console.log("API Keys loaded from storage.");
 

@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const enhanceSystemPrompts = {
-        hone: `You are a master of concise, precise system prompts. Your task is to refine the provided archetype prompt titled "{archetype}" into a more direct and efficient version while preserving its core intent. Make it clear and unambiguous but remove all unnecessary words. Focus on essential requirements and constraints from the original prompt: "{prompt}". Include only critical edge cases and format requirements. Aim for maximum clarity with minimum words. CUT THE FAT!!! Output ONLY the refined prompt with no other text.`,
+        hone: `You are a master of concise, precise system prompts. Your task is to refine the provided archetype prompt titled "{archetype}" into a more direct and efficient version while preserving its core intent, outputting a more focused and clear archetype prompt with NO custom formatting (bold, italics, etc). Make it clear and unambiguous but remove all unnecessary words. Focus on essential requirements and constraints from the original prompt: "{prompt}". Include only critical edge cases and format requirements. Aim for maximum clarity with minimum words. CUT THE FAT!!! Output ONLY the refined prompt with no other text.`,
         
         flesh: `You are an eloquent system prompt architect with a gift for comprehensive instruction design. Your mission is to expand and enrich the provided archetype prompt titled "{archetype}" while maintaining its fundamental purpose. Starting from the original: "{prompt}", develop a more detailed and nuanced version that:
 
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
 5. Offers examples or analogies where helpful
 6. Maintains a flowing, natural language style while being precise
 
-Your enhanced prompt should feel thorough and well-crafted, using sophisticated language to convey complex requirements clearly. Output ONLY the enhanced prompt with no other text.`
+Your enhanced prompt should feel thorough and well-crafted, using sophisticated language to convey complex requirements clearly. Output ONLY the enhanced prompt with no other text. Do not do anything fancy with the formatting. No bold, no headers. No italics. Nada.`
     };
 
     let currentlyEditing = null;

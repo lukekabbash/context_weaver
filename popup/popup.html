@@ -12,7 +12,7 @@
                 <img src="/icons/icon128.png" alt="Context Weaver">
                 <h1>Context Weaver</h1>
             </div>
-            <button id="theme-toggle" class="icon-button" title="Toggle theme">
+            <button id="theme-toggle" class="icon-button">
                 <span class="material-icons-round">dark_mode</span>
             </button>
         </div>
@@ -52,7 +52,7 @@
         </div>
 
         <button id="send-button" class="primary-button">
-            <span class="button-text">WEAVE</span>
+            <span class="button-text">Weave</span>
             <div class="loading-spinner"></div>
         </button>
 
@@ -63,11 +63,11 @@
                     <span class="model-name">AI Output:</span>
                 </label>
                 <div class="output-actions">
-                    <button id="clear-button" class="icon-button" title="Clear output">
-                        <span class="material-icons-round">clear</span>
-                    </button>
-                    <button id="copy-button" class="icon-button" title="Copy to clipboard">
+                    <button id="copy-button" class="icon-button" data-tooltip="Copy to clipboard">
                         <span class="material-icons-round">content_copy</span>
+                    </button>
+                    <button id="clear-button" class="icon-button" data-tooltip="Clear output">
+                        <span class="material-icons-round">close</span>
                     </button>
                 </div>
             </div>
