@@ -1262,15 +1262,22 @@ button:hover {
 }
 
 .message.user .message-content {
+    display: inline-block;
     background: var(--accent);
     color: white;
     border-radius: 12px 12px 0 12px;
+    padding: 0.75rem 1rem;
+    margin-left: auto; /* Push content to the right */
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .message.assistant .message-content {
     background: transparent;
     color: var(--text-primary);
     padding: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .message-actions {

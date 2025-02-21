@@ -959,12 +959,20 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
         // Load archetypes into selector
         updateChatArchetypes();
 
-        // Check for text from popup
-        chrome.storage.local.get(['popupSelectedText'], (result) => {
-            if (result.popupSelectedText) {
-                chatInput.value = result.popupSelectedText;
+        // Check for text from browser selection or popup
+        chrome.storage.local.get(['selectedText', 'popupSelectedText'], (result) => {
+            const textToUse = result.selectedText || result.popupSelectedText || '';
+            if (textToUse) {
+                chatInput.value = textToUse;
                 // Clear the storage after retrieving
-                chrome.storage.local.remove(['popupSelectedText']);
+                chrome.storage.local.remove(['selectedText', 'popupSelectedText']);
+            }
+        });
+
+        // Listen for text selection updates
+        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+            if (request.action === "getText" && request.text) {
+                chatInput.value = request.text;
             }
         });
 
