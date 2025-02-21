@@ -133,16 +133,33 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
     }
 
     function renderArchetypes(archetypes) {
-        archetypesList.innerHTML = '';
-        archetypes.forEach(archetype => {
-            const archetypeItem = createArchetypeItem(archetype);
-            archetypesList.appendChild(archetypeItem);
+        chrome.storage.sync.get(['archetypeOrder'], (result) => {
+            const order = result.archetypeOrder || [];
+            
+            // Sort archetypes based on saved order, putting new items at the end
+            const sortedArchetypes = [
+                ...order.filter(name => archetypes.includes(name)),
+                ...archetypes.filter(name => !order.includes(name))
+            ];
+            
+            archetypesList.innerHTML = '';
+            sortedArchetypes.forEach(archetype => {
+                const archetypeItem = createArchetypeItem(archetype);
+                archetypesList.appendChild(archetypeItem);
+            });
         });
     }
 
     function createArchetypeItem(archetype) {
         const item = document.createElement('div');
         item.className = 'archetype-item';
+        item.draggable = true;
+        
+        // Add drag handle
+        const dragHandle = document.createElement('div');
+        dragHandle.className = 'drag-handle';
+        dragHandle.innerHTML = '<span class="material-icons-round">drag_indicator</span>';
+        item.appendChild(dragHandle);
         
         const name = document.createElement('span');
         name.className = 'archetype-name';
@@ -155,7 +172,7 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
         // Get visibility state
         chrome.storage.sync.get(['archetypeVisibility'], (result) => {
             const visibility = result.archetypeVisibility || {};
-            const isVisible = visibility[archetype] !== false; // Default to visible if not set
+            const isVisible = visibility[archetype] !== false;
             
             const visibilityButton = document.createElement('button');
             visibilityButton.className = 'icon-button visibility-toggle';
@@ -182,7 +199,125 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
         
         item.appendChild(name);
         item.appendChild(buttonsContainer);
+
+        // Add drag event listeners
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragend', handleDragEnd);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('drop', handleDrop);
+
         return item;
+    }
+
+    // Drag and drop handlers
+    let draggedItem = null;
+
+    function handleDragStart(e) {
+        draggedItem = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', this.querySelector('.archetype-name').textContent);
+    }
+
+    function handleDragEnd(e) {
+        this.classList.remove('dragging');
+        draggedItem = null;
+        saveArchetypeOrder();
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        const bounding = this.getBoundingClientRect();
+        const offset = bounding.y + (bounding.height / 2);
+        
+        if (e.clientY - offset > 0) {
+            this.style.borderBottom = '2px solid var(--accent)';
+            this.style.borderTop = '';
+        } else {
+            this.style.borderTop = '2px solid var(--accent)';
+            this.style.borderBottom = '';
+        }
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        this.style.borderTop = '';
+        this.style.borderBottom = '';
+        
+        if (draggedItem === this) return;
+        
+        const bounding = this.getBoundingClientRect();
+        const offset = bounding.y + (bounding.height / 2);
+        const shouldInsertAfter = e.clientY - offset > 0;
+        
+        if (shouldInsertAfter) {
+            this.parentNode.insertBefore(draggedItem, this.nextSibling);
+        } else {
+            this.parentNode.insertBefore(draggedItem, this);
+        }
+        
+        saveArchetypeOrder();
+    }
+
+    function saveArchetypeOrder() {
+        const archetypes = Array.from(archetypesList.children).map(item => 
+            item.querySelector('.archetype-name').textContent
+        );
+        
+        chrome.storage.sync.get(['archetypePrompts', 'archetypeVisibility'], (result) => {
+            const prompts = result.archetypePrompts || {};
+            const visibility = result.archetypeVisibility || {};
+            
+            // Save the order and update all related storage
+            chrome.storage.sync.set({ 
+                archetypeOrder: archetypes,
+                archetypePrompts: prompts,
+                archetypeVisibility: visibility
+            }, () => {
+                // Update the chat archetype selector if it exists
+                if (chatArchetypeSelect) {
+                    updateChatArchetypes();
+                }
+                
+                // Notify all components about the update
+                try {
+                    // Notify background script
+                    chrome.runtime.sendMessage({ 
+                        action: "archetypesUpdated",
+                        order: archetypes,
+                        prompts: prompts,
+                        visibility: visibility
+                    });
+                    
+                    // Notify all tabs including popup
+                    chrome.tabs.query({}, (tabs) => {
+                        tabs.forEach(tab => {
+                            chrome.tabs.sendMessage(tab.id, { 
+                                action: "archetypesUpdated",
+                                order: archetypes,
+                                prompts: prompts,
+                                visibility: visibility
+                            }).catch(() => {
+                                // Silently ignore errors for inactive tabs
+                                console.debug(`Tab ${tab.id} not ready for messages`);
+                            });
+                        });
+                    });
+                    
+                    // Update any open popups
+                    chrome.runtime.sendMessage({ 
+                        action: "updatePopupArchetypes",
+                        order: archetypes,
+                        prompts: prompts,
+                        visibility: visibility
+                    });
+                } catch (e) {
+                    console.debug('Could not notify all components:', e);
+                }
+            });
+        });
     }
 
     function toggleArchetypeVisibility(archetype, button) {
@@ -838,22 +973,28 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
     }
 
     function updateChatArchetypes() {
-        chrome.storage.sync.get(['archetypePrompts', 'archetypeVisibility'], (result) => {
+        chrome.storage.sync.get(['archetypePrompts', 'archetypeVisibility', 'archetypeOrder'], (result) => {
             const prompts = result.archetypePrompts || defaultArchetypes;
             const visibility = result.archetypeVisibility || {};
+            const order = result.archetypeOrder || [];
             
             // Clear existing options except "None"
             while (chatArchetypeSelect.options.length > 1) {
                 chatArchetypeSelect.remove(1);
             }
             
-            // Add visible archetypes
-            Object.entries(prompts)
-                .filter(([name, _]) => visibility[name] !== false)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .forEach(([name, prompt]) => {
+            // Sort archetypes based on saved order
+            const sortedArchetypes = [
+                ...order.filter(name => prompts[name] !== undefined),
+                ...Object.keys(prompts).filter(name => !order.includes(name))
+            ];
+            
+            // Add visible archetypes in the correct order
+            sortedArchetypes
+                .filter(name => visibility[name] !== false)
+                .forEach(name => {
                     const option = document.createElement('option');
-                    option.value = prompt;
+                    option.value = prompts[name];
                     option.textContent = name;
                     chatArchetypeSelect.appendChild(option);
                 });

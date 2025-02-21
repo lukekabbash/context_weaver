@@ -393,9 +393,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function updatePersonalitySelect() {
-        chrome.storage.sync.get(['archetypePrompts', 'archetypeVisibility', 'selectedPersonality'], (result) => {
+        chrome.storage.sync.get(['archetypePrompts', 'archetypeVisibility', 'selectedPersonality', 'archetypeOrder'], (result) => {
             const prompts = result.archetypePrompts || defaultArchetypes;
             const visibility = result.archetypeVisibility || {};
+            const order = result.archetypeOrder || [];
             
             // Save current selection
             const currentSelection = personalitySelect.value;
@@ -405,10 +406,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 personalitySelect.remove(1);
             }
             
-            // Add visible archetypes
-            Object.keys(prompts)
+            // Sort archetypes based on saved order
+            const sortedArchetypes = [
+                ...order.filter(name => prompts[name] !== undefined),
+                ...Object.keys(prompts).filter(name => !order.includes(name))
+            ];
+            
+            // Add visible archetypes in the correct order
+            sortedArchetypes
                 .filter(archetype => visibility[archetype] !== false)
-                .sort()
                 .forEach(archetype => {
                     const option = document.createElement('option');
                     option.value = archetype;
@@ -434,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             saveState();
-            console.log('Updated personality select with archetypes:', Object.keys(prompts), 'Selected:', personalitySelect.value);
+            console.log('Updated personality select with ordered archetypes:', sortedArchetypes, 'Selected:', personalitySelect.value);
         });
     }
 
@@ -443,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Listen for archetype updates
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        if (request.action === "archetypesUpdated") {
+        if (request.action === "archetypesUpdated" || request.action === "updatePopupArchetypes") {
             console.log('Received archetypesUpdated message');
             updatePersonalitySelect();
         }
@@ -463,4 +469,38 @@ document.addEventListener('DOMContentLoaded', () => {
         archetypePrompt.parentNode.insertBefore(previewDiv, archetypePrompt.nextSibling);
         setupRealtimeFormatting(archetypePrompt, previewDiv);
     }
+
+    // Function to update archetype dropdown with correct order
+    function updateArchetypeDropdown() {
+        chrome.storage.sync.get(['archetypePrompts', 'archetypeVisibility', 'archetypeOrder'], (result) => {
+            const prompts = result.archetypePrompts || {};
+            const visibility = result.archetypeVisibility || {};
+            const order = result.archetypeOrder || [];
+            const select = document.getElementById('archetype-select');
+            
+            // Clear existing options except "None"
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
+            
+            // Sort archetypes based on saved order
+            const sortedArchetypes = [
+                ...order.filter(name => prompts[name] !== undefined),
+                ...Object.keys(prompts).filter(name => !order.includes(name))
+            ];
+            
+            // Add visible archetypes in the correct order
+            sortedArchetypes
+                .filter(name => visibility[name] !== false)
+                .forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = prompts[name];
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
+        });
+    }
+
+    // Initial load of archetypes
+    updateArchetypeDropdown();
 });

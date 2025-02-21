@@ -265,16 +265,36 @@ button:hover {
     border: 1px solid var(--border);
     border-radius: 8px;
     transition: all 0.2s ease;
+    cursor: move; /* Indicate draggable */
+}
+
+.archetype-item.dragging {
+    opacity: 0.5;
+    background-color: var(--bg-primary);
+    box-shadow: 0 4px 12px var(--shadow);
+    transform: scale(1.02);
 }
 
 .archetype-item:hover {
     border-color: var(--accent);
 }
 
+.drag-handle {
+    color: var(--text-secondary);
+    cursor: move;
+    padding: 0.5rem;
+    margin-right: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.drag-handle:hover {
+    color: var(--text-primary);
+}
+
 .archetype-name {
     color: var(--text-primary);
     font-size: 0.9375rem;
-    cursor: pointer;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     transition: all 0.2s ease;
@@ -282,6 +302,7 @@ button:hover {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: pointer; /* Keep the name clickable */
 }
 
 .archetype-name:hover {
