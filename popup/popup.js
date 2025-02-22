@@ -311,11 +311,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.action === "getText" && request.text) {
-            popupState.inputText = request.text;
-            // Clear output when new text is highlighted
-            popupState.outputText = "";
-            responseDiv.innerHTML = '';
-            updateOutputCounts('');
+            // Only clear output if the input text has changed
+            if (request.text !== popupState.inputText) {
+                popupState.inputText = request.text;
+                popupState.outputText = "";
+                responseDiv.innerHTML = '';
+                updateOutputCounts('');
+            } else {
+                popupState.inputText = request.text;
+            }
             saveState();
             applyStateToUI();
         }
@@ -326,11 +330,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     chrome.runtime.sendMessage({ action: "getText" }, (response) => {
         if (response && response.text) {
-            popupState.inputText = response.text;
-            // Clear output when new text is loaded
-            popupState.outputText = "";
-            responseDiv.innerHTML = '';
-            updateOutputCounts('');
+            // Only clear output if the input text has changed
+            if (response.text !== popupState.inputText) {
+                popupState.inputText = response.text;
+                popupState.outputText = "";
+                responseDiv.innerHTML = '';
+                updateOutputCounts('');
+            } else {
+                popupState.inputText = response.text;
+            }
             saveState();
             applyStateToUI();
         }
