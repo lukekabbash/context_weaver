@@ -98,8 +98,8 @@
                 <ul>
                     <li><a href="https://platform.openai.com/account/api-keys" target="_blank">OpenAI</a> - For GPT-4o mini and o1-mini models</li>
                     <li><a href="https://platform.deepseek.com" target="_blank">DeepSeek</a> - For DeepSeek's V3 Chat and R1 Reasoner models</li>
-                    <li><a href="https://x.ai" target="_blank">xAI</a> - For Grok 2 access</li>
-                    <li><a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a> - For Gemini models</li>
+                    <li><a href="https://docs.x.ai/docs/overview" target="_blank">xAI</a> - For Grok 2 access</li>
+                    <li><a href="https://ai.dev/app/apikey" target="_blank">Google AI Studio</a> - For Gemini models</li>
                 </ul>
                 <p>Your API keys are stored in your browser's sync storage and are only used to authenticate requests to the respective AI services. Context Weaver does not collect or transmit your API keys to any other services. See warning for details.</p>
             </div>
@@ -111,20 +111,32 @@
 
                 <div class="api-key-section">
                     <div class="api-key-input">
-                        <label for="openai-api-key">OpenAI API Key:</label>
+                        <label for="openai-api-key">
+                            <img src="/icons/ailogos/OpenAI200.png" alt="OpenAI Logo">
+                            OpenAI API Key:
+                        </label>
                         <input type="password" id="openai-api-key" placeholder="Enter your OpenAI API key">
                     </div>
                     <div class="api-key-input">
-                        <label for="deepseek-api-key">DeepSeek API Key:</label>
-                        <input type="password" id="deepseek-api-key" placeholder="Enter your DeepSeek API key">
+                        <label for="gemini-api-key">
+                            <img src="/icons/ailogos/Gemini200.png" alt="Gemini Logo">
+                            Gemini API Key:
+                        </label>
+                        <input type="password" id="gemini-api-key" placeholder="Enter your Gemini API key">
                     </div>
                     <div class="api-key-input">
-                        <label for="grok-api-key">Grok API Key:</label>
+                        <label for="grok-api-key">
+                            <img src="/icons/ailogos/grok200.png" alt="Grok Logo">
+                            Grok API Key:
+                        </label>
                         <input type="password" id="grok-api-key" placeholder="Enter your Grok API key">
                     </div>
                     <div class="api-key-input">
-                        <label for="gemini-api-key">Gemini API Key:</label>
-                        <input type="password" id="gemini-api-key" placeholder="Enter your Gemini API key">
+                        <label for="deepseek-api-key">
+                            <img src="/icons/ailogos/deepseek200.png" alt="DeepSeek Logo">
+                            DeepSeek API Key:
+                        </label>
+                        <input type="password" id="deepseek-api-key" placeholder="Enter your DeepSeek API key">
                     </div>
                 </div>
 
@@ -133,9 +145,20 @@
                     Save Keys
                 </button>
 
-                <p class="warning-text">
-                    <b>WARNING:</b> Input API keys at your own risk. Context Weaver is not responsible for your API key security. API keys are stored locally in chrome.storage.sync. Context Weaver itself collects no data, but that does not make this extension secure. Be aware of the Terms of Service and Privacy Policy of the assorted AI services Context Weaver integrates with.
-                </p>
+                <div class="warning-card">
+                    <p>Input API keys at your own risk. Context Weaver is not responsible for your API key security. API keys are stored locally in chrome.storage.sync. Context Weaver itself collects no data, but that does not make this extension secure. Be aware of the Terms of Service and Privacy Policy of the assorted AI services Context Weaver integrates with.</p>
+                </div>
+
+                <!-- Add Model Visibility Management Card -->
+                <div class="model-visibility-section">
+                    <div class="model-visibility-header">
+                        <h3>Manage Model Visibility</h3>
+                        <p>Choose which AI models appear in your dropdowns. Models are grouped by provider for easy management.</p>
+                    </div>
+                    <div id="model-visibility-groups">
+                        <!-- Model groups will be added here dynamically -->
+                    </div>
+                </div>
             </div>
         </div>
 

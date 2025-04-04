@@ -745,3 +745,26 @@ select:focus {
 [title]:hover:after {
     display: none;
 }
+
+.provider-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.provider-logo {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    transition: filter 0.2s ease;
+}
+
+.provider-logo[src*="OpenAI200"] {
+    width: 20.4px; /* 24px * 0.85 = 20.4px */
+    height: 20.4px;
+}
+
+/* Invert logos in light mode */
+.light-theme .provider-logo {
+    filter: invert(1);
+}

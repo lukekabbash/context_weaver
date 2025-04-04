@@ -81,25 +81,41 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const enhanceSystemPrompts = {
-        hone: `You are a master of concise, precise system prompts. Your task is to refine the provided archetype prompt titled "{archetype}" into a more direct and efficient version while preserving its core intent, outputting a more focused and clear archetype prompt with NO custom formatting (bold, italics, etc). Make it clear and unambiguous but remove all unnecessary words. Focus on essential requirements and constraints from the original prompt: "{prompt}". Include only critical edge cases and format requirements. Aim for maximum clarity with minimum words. CUT THE FAT!!! Output ONLY the refined prompt with no other text.`,
+        hone: `You are a master of concise, precise system prompts. Your task is to refine the provided archetype prompt titled "{archetype}" into a more direct and efficient version while preserving its core intent. The output must use only plain text - no special characters, no formatting, no symbols, no markdown, no bullets, no numbers. Make it clear and unambiguous but remove all unnecessary words. Focus on essential requirements and constraints from the original prompt: "{prompt}". Include only critical edge cases and format requirements. Aim for maximum clarity with minimum words. Output ONLY the refined prompt with no other text.`,
         
-        flesh: `You are an eloquent system prompt architect with a gift for comprehensive instruction design. Your mission is to expand and enrich the provided archetype prompt titled "{archetype}" while maintaining its fundamental purpose. Starting from the original: "{prompt}", develop a more detailed and nuanced version that:
+        flesh: `You are an eloquent system prompt architect with a gift for comprehensive instruction design. Your mission is to expand and enrich the provided archetype prompt titled "{archetype}" while maintaining its fundamental purpose, staying within a strict 150-word limit. Starting from the original: "{prompt}", develop a more detailed and nuanced version that:
 
 1. Elaborates on the core objectives with rich, descriptive language
-2. Anticipates and addresses a wide range of edge cases
-3. Provides detailed guidance on tone, style, and approach
-4. Includes comprehensive format specifications and structural requirements
-5. Offers examples or analogies where helpful
-6. Maintains a flowing, natural language style while being precise
+2. Anticipates and addresses key edge cases
+3. Provides guidance on tone, style, and approach
+4. Includes essential format specifications
+5. Uses sophisticated language while being precise
 
-Your enhanced prompt should feel thorough and well-crafted, using sophisticated language to convey complex requirements clearly. Output ONLY the enhanced prompt with no other text. Do not do anything fancy with the formatting. No bold, no headers. No italics. Nada.`
+IMPORTANT: Use only plain text in your response - no special characters, no formatting, no symbols, no markdown, no bullets, no numbers. Your enhanced prompt must be EXACTLY 150 WORDS OR LESS. This is a hard requirement. Output ONLY the enhanced prompt with no other text.`
     };
 
     let currentlyEditing = null;
     let currentEnhancePort = null;
 
+    // Add word counter function
+    function countWords(text) {
+        return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+    }
+
+    // Add word counter update function
+    function updateWordCount() {
+        const text = archetypePrompt.value;
+        const wordCount = countWords(text);
+        const wordCountDisplay = document.getElementById('word-count');
+        const isOverLimit = wordCount > 150;
+        
+        wordCountDisplay.textContent = `${wordCount}/150 words`;
+        wordCountDisplay.style.color = isOverLimit ? 'var(--error)' : 'var(--text-secondary)';
+        saveArchetypeButton.disabled = isOverLimit;
+    }
+
     // Load saved keys and archetypes on options page load
-    chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey', 'geminiApiKey', 'archetypePrompts', 'archetypeVisibility'], (result) => {
+    chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey', 'geminiApiKey', 'archetypePrompts', 'archetypeVisibility', 'modelVisibility'], (result) => {
         document.getElementById('openai-api-key').value = result.openaiApiKey || '';
         document.getElementById('deepseek-api-key').value = result.deepseekApiKey || '';
         document.getElementById('grok-api-key').value = result.grokApiKey || '';
@@ -110,26 +126,326 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
         const savedVisibility = result.archetypeVisibility || {};
         renderArchetypes(Object.keys(savedPrompts));
 
-        // Load available models
+        // Load available models and initialize model visibility
         loadAvailableModels();
+        initializeModelVisibility(result.modelVisibility || {});
     });
 
     function loadAvailableModels() {
         chrome.runtime.sendMessage({ action: "getModelList" }, (response) => {
             if (response && response.models && response.models.length > 0) {
-                const simplifiedModels = response.models.map(model => {
-                    // Simplify model names by removing provider names
+                const truncatedModels = response.models.map(model => {
+                    // Extract just the model name without version or provider
                     const name = model.name
                         .replace(' (OpenAI)', '')
                         .replace(' (DeepSeek)', '')
-                        .replace(' (xAI)', '');
-                    return { ...model, name };
+                        .replace(' (xAI)', '')
+                        .replace(' (Google)', '')
+                        .replace('Gemini ', '')
+                        .replace('-Lite', ' Lite');
+                    return { ...model, displayName: name };
                 });
                 
-                enhanceModelSelect.innerHTML = simplifiedModels
-                    .map(model => `<option value="${model.value}">${model.name}</option>`)
+                enhanceModelSelect.innerHTML = truncatedModels
+                    .map(model => `<option value="${model.value}">${model.displayName}</option>`)
                     .join('');
+
+                // Initialize model visibility management with saved order
+                chrome.storage.sync.get(['modelProviderOrder'], (result) => {
+                    const savedOrder = result.modelProviderOrder || ['OpenAI', 'Google', 'xAI', 'DeepSeek'];
+                    renderModelVisibilityGroups(response.models, savedOrder);
+                });
             }
+        });
+    }
+
+    function initializeModelVisibility(savedVisibility) {
+        // Store the initial visibility state
+        window.modelVisibility = savedVisibility;
+    }
+
+    function renderModelVisibilityGroups(models, providerOrder) {
+        const modelGroups = {};
+        const providerLogos = {
+            'OpenAI': '/icons/ailogos/OpenAI200.png',
+            'Google': '/icons/ailogos/Gemini200.png',
+            'DeepSeek': '/icons/ailogos/deepseek200.png',
+            'xAI': '/icons/ailogos/grok200.png'
+        };
+
+        // Group models by provider
+        models.forEach(model => {
+            const provider = model.name.match(/\((.*?)\)$/)[1];
+            if (!modelGroups[provider]) {
+                modelGroups[provider] = [];
+            }
+            modelGroups[provider].push(model);
+        });
+
+        const container = document.getElementById('model-visibility-groups');
+        container.innerHTML = '';
+
+        // Create provider groups in specified order
+        providerOrder.forEach(provider => {
+            if (modelGroups[provider]) {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'model-provider-group';
+                groupDiv.draggable = true;
+                groupDiv.dataset.provider = provider;
+
+                // Add drag handle
+                const dragHandle = document.createElement('div');
+                dragHandle.className = 'drag-handle';
+                dragHandle.innerHTML = '<span class="material-icons-round">drag_indicator</span>';
+
+                // Add provider header with logo
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'provider-header';
+                headerDiv.innerHTML = `
+                    <div class="provider-info">
+                        <img src="${providerLogos[provider]}" alt="${provider} Logo" class="provider-logo">
+                        <span class="provider-name">${provider}</span>
+                    </div>
+                `;
+                headerDiv.insertBefore(dragHandle, headerDiv.firstChild);
+                groupDiv.appendChild(headerDiv);
+
+                // Add model list
+                const modelList = document.createElement('div');
+                modelList.className = 'model-list';
+                modelList.dataset.provider = provider;
+
+                modelGroups[provider].forEach(model => {
+                    const isVisible = window.modelVisibility[model.value] !== false;
+                    const modelItem = document.createElement('div');
+                    modelItem.className = 'model-item';
+                    modelItem.draggable = true;
+                    modelItem.dataset.modelId = model.value;
+                    modelItem.innerHTML = `
+                        <div class="model-drag-handle">
+                            <span class="material-icons-round">drag_indicator</span>
+                        </div>
+                        <span class="model-name">${model.name}</span>
+                        <button class="model-visibility-toggle" data-model="${model.value}" title="${isVisible ? 'Hide from dropdowns' : 'Show in dropdowns'}">
+                            <span class="material-icons-round">${isVisible ? 'visibility' : 'visibility_off'}</span>
+                        </button>
+                    `;
+
+                    // Add click handler for visibility toggle
+                    const toggleButton = modelItem.querySelector('.model-visibility-toggle');
+                    toggleButton.addEventListener('click', () => toggleModelVisibility(model.value, toggleButton));
+
+                    // Add drag and drop handlers for models
+                    modelItem.addEventListener('dragstart', handleModelDragStart);
+                    modelItem.addEventListener('dragend', handleModelDragEnd);
+                    modelItem.addEventListener('dragover', handleModelDragOver);
+                    modelItem.addEventListener('drop', handleModelDrop);
+
+                    modelList.appendChild(modelItem);
+                });
+
+                groupDiv.appendChild(modelList);
+
+                // Add drag and drop event listeners for provider groups
+                groupDiv.addEventListener('dragstart', handleProviderDragStart);
+                groupDiv.addEventListener('dragend', handleProviderDragEnd);
+                groupDiv.addEventListener('dragover', handleProviderDragOver);
+                groupDiv.addEventListener('drop', handleProviderDrop);
+
+                container.appendChild(groupDiv);
+            }
+        });
+    }
+
+    // Model drag and drop handlers
+    let draggedModel = null;
+
+    function handleModelDragStart(e) {
+        draggedModel = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', this.dataset.modelId);
+        // Stop event propagation to prevent provider drag
+        e.stopPropagation();
+    }
+
+    function handleModelDragEnd(e) {
+        this.classList.remove('dragging');
+        draggedModel = null;
+        e.stopPropagation();
+    }
+
+    function handleModelDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        // Only allow dropping within the same provider group
+        const sourceProvider = draggedModel.closest('.model-list').dataset.provider;
+        const targetProvider = this.closest('.model-list').dataset.provider;
+        
+        if (sourceProvider === targetProvider) {
+            const bounding = this.getBoundingClientRect();
+            const offset = bounding.y + (bounding.height / 2);
+            
+            if (e.clientY - offset > 0) {
+                this.style.borderBottom = '2px solid var(--accent)';
+                this.style.borderTop = '';
+            } else {
+                this.style.borderTop = '2px solid var(--accent)';
+                this.style.borderBottom = '';
+            }
+        }
+        
+        e.stopPropagation();
+    }
+
+    function handleModelDrop(e) {
+        e.preventDefault();
+        this.style.borderTop = '';
+        this.style.borderBottom = '';
+        
+        // Only allow dropping within the same provider group
+        const sourceProvider = draggedModel.closest('.model-list').dataset.provider;
+        const targetProvider = this.closest('.model-list').dataset.provider;
+        
+        if (draggedModel === this || sourceProvider !== targetProvider) return;
+        
+        const modelList = this.parentNode;
+        const bounding = this.getBoundingClientRect();
+        const offset = bounding.y + (bounding.height / 2);
+        const shouldInsertAfter = e.clientY - offset > 0;
+        
+        if (shouldInsertAfter) {
+            modelList.insertBefore(draggedModel, this.nextSibling);
+        } else {
+            modelList.insertBefore(draggedModel, this);
+        }
+        
+        e.stopPropagation();
+    }
+
+    // Provider drag and drop handlers
+    let draggedProvider = null;
+
+    function handleProviderDragStart(e) {
+        draggedProvider = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', this.dataset.provider);
+    }
+
+    function handleProviderDragEnd(e) {
+        this.classList.remove('dragging');
+        draggedProvider = null;
+        
+        // Save the new order
+        saveProviderOrder();
+    }
+
+    function handleProviderDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        const bounding = this.getBoundingClientRect();
+        const offset = bounding.y + (bounding.height / 2);
+        
+        if (e.clientY - offset > 0) {
+            this.style.borderBottom = '2px solid var(--accent)';
+            this.style.borderTop = '';
+        } else {
+            this.style.borderTop = '2px solid var(--accent)';
+            this.style.borderBottom = '';
+        }
+    }
+
+    function handleProviderDrop(e) {
+        e.preventDefault();
+        this.style.borderTop = '';
+        this.style.borderBottom = '';
+        
+        if (draggedProvider === this) return;
+        
+        const container = document.getElementById('model-visibility-groups');
+        const bounding = this.getBoundingClientRect();
+        const offset = bounding.y + (bounding.height / 2);
+        const shouldInsertAfter = e.clientY - offset > 0;
+        
+        if (shouldInsertAfter) {
+            this.parentNode.insertBefore(draggedProvider, this.nextSibling);
+        } else {
+            this.parentNode.insertBefore(draggedProvider, this);
+        }
+        
+        saveProviderOrder();
+    }
+
+    function saveProviderOrder() {
+        const container = document.getElementById('model-visibility-groups');
+        const newOrder = Array.from(container.children).map(group => 
+            group.dataset.provider
+        );
+        
+        // Save to storage and update constants
+        chrome.storage.sync.set({ modelProviderOrder: newOrder }, () => {
+            // Notify that provider order has changed
+            chrome.runtime.sendMessage({ 
+                action: "modelProviderOrderUpdated",
+                order: newOrder
+            });
+
+            // Notify all tabs about the update
+            chrome.tabs.query({}, (tabs) => {
+                tabs.forEach(tab => {
+                    chrome.tabs.sendMessage(tab.id, { 
+                        action: "modelProviderOrderUpdated",
+                        order: newOrder
+                    }).catch(() => {
+                        // Silently ignore errors for inactive tabs
+                        console.debug(`Tab ${tab.id} not ready for messages`);
+                    });
+                });
+            });
+
+            // Update the archetype editor's model select immediately
+            chrome.runtime.sendMessage({ action: "getModelList" }, (response) => {
+                if (response && response.models) {
+                    const enhanceModelSelect = document.getElementById('enhance-model');
+                    if (enhanceModelSelect) {
+                        const truncatedModels = response.models.map(model => {
+                            const name = model.name
+                                .replace(' (OpenAI)', '')
+                                .replace(' (DeepSeek)', '')
+                                .replace(' (xAI)', '')
+                                .replace(' (Google)', '')
+                                .replace('Gemini ', '')
+                                .replace('-Lite', ' Lite');
+                            return { ...model, displayName: name };
+                        });
+                        
+                        enhanceModelSelect.innerHTML = truncatedModels
+                            .map(model => `<option value="${model.value}">${model.displayName}</option>`)
+                            .join('');
+                    }
+                }
+            });
+        });
+    }
+
+    function toggleModelVisibility(modelId, button) {
+        const isCurrentlyVisible = window.modelVisibility[modelId] !== false;
+        window.modelVisibility[modelId] = !isCurrentlyVisible;
+
+        // Update button state
+        button.innerHTML = `<span class="material-icons-round">${window.modelVisibility[modelId] ? 'visibility' : 'visibility_off'}</span>`;
+        button.title = window.modelVisibility[modelId] ? 'Hide from dropdowns' : 'Show in dropdowns';
+
+        // Save to storage
+        chrome.storage.sync.set({ modelVisibility: window.modelVisibility }, () => {
+            // Notify that model visibility has changed
+            chrome.runtime.sendMessage({ 
+                action: "modelVisibilityUpdated",
+                visibility: window.modelVisibility
+            });
         });
     }
 
@@ -418,8 +734,9 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
                         archetypePrompt.value += message.chunk;
                     }
                     
-                    // Auto-scroll textarea
+                    // Auto-scroll textarea and update word count
                     archetypePrompt.scrollTop = archetypePrompt.scrollHeight;
+                    updateWordCount();
                 } else if (message.type === 'end') {
                     // Clean up the final result
                     archetypePrompt.value = archetypePrompt.value.trim()
@@ -427,6 +744,8 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
                         .replace(/^(prompt:|enhanced:|output:)/i, '') // Remove any common prefixes
                         .trim();
                     
+                    // Final word count update
+                    updateWordCount();
                     cleanup();
                 } else if (message.type === 'error') {
                     console.error('Enhancement error:', message.error);
@@ -504,7 +823,7 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
             // Show editor before updating content to ensure smooth transition
             archetypeEditor.classList.remove('hidden');
             
-            // Update editor header with edit button
+            // Update editor header with edit button and word counter
             editingArchetypeName.innerHTML = `
                 <div class="archetype-header">
                     <span class="archetype-title">${archetype}</span>
@@ -512,6 +831,7 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
                         <span class="material-icons-round">edit</span>
                     </button>
                 </div>
+                <span id="word-count" class="word-count">0/150 words</span>
             `;
 
             // Add click handler for the edit button
@@ -558,6 +878,7 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
 
             // Update content and handle markdown
             archetypePrompt.value = prompts[archetype] || '';
+            updateWordCount(); // Initial word count update
             
             // Ensure the editor is visible and focused
             archetypePrompt.focus();
@@ -770,6 +1091,11 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
         });
     });
 
+    // Add event listener for word count
+    archetypePrompt.addEventListener('input', updateWordCount);
+    archetypePrompt.addEventListener('keyup', updateWordCount);
+    archetypePrompt.addEventListener('paste', () => setTimeout(updateWordCount, 0));
+
     // Update the CSS for the buttons container
     const style = document.createElement('style');
     style.textContent = `
@@ -798,7 +1124,7 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
 
         .archetype-editor {
             margin-top: 16px;
-            padding: 16px;
+            padding: 20px;
             background-color: var(--bg-primary);
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -823,70 +1149,221 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
             pointer-events: none;
         }
 
-        .archetype-editor h3 {
-            margin: 0;
-            font-size: 1.1em;
-            font-weight: 500;
-            color: var(--text-primary);
-            display: inline-flex;
-            align-items: center;
-            margin-right: 8px;
-        }
-
         .editor-header {
             display: flex;
             align-items: center;
             margin-bottom: 12px;
+            padding: 0;
             font-size: 1.1em;
+            gap: 8px;
         }
 
-        .archetype-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex: 1;
+        .editor-header h3 {
+            margin: 0;
+            font-size: 1.1em;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
         }
 
         #editing-archetype-name {
             display: inline-flex;
             align-items: center;
             flex: 1;
+            gap: 8px;
         }
 
-        .edit-name-button {
-            padding: 4px;
-            display: inline-flex;
+        .archetype-header {
+            display: flex;
+            justify-content: flex-start;
             align-items: center;
-            justify-content: center;
+            gap: 8px;
+            flex: 1;
         }
 
-        .edit-name-button .material-icons-round {
-            font-size: 18px;
-            line-height: 1;
-        }
-
-        .edit-name-input {
-            font-size: 1.1em;
-            font-weight: 500;
-            color: var(--text-primary);
-            background: var(--bg-secondary);
+        #archetype-prompt {
+            width: 100%;
+            min-height: 150px;
+            padding: 12px;
+            margin: 0;
             border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 2px 6px;
-            margin: -3px 0;
-            width: auto;
-            min-width: 200px;
-        }
-
-        .edit-name-input:focus {
-            outline: none;
-            border-color: var(--accent);
+            border-radius: 8px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            resize: vertical;
         }
 
         .archetype-title {
             font-weight: 500;
             font-size: 1.1em;
             line-height: 1;
+        }
+
+        .word-count {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            margin-left: 12px;
+            white-space: nowrap;
+        }
+
+        /* API Key Input Styles */
+        #api-keys-tab label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        #api-keys-tab label img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+        }
+
+        #api-keys-tab label:first-of-type {
+            margin-top: 8px;
+        }
+
+        #api-keys-tab input[type="password"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9375rem;
+        }
+
+        /* Model Visibility Management Styles */
+        .model-visibility-section {
+            margin-top: 24px;
+            padding: 16px;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .model-visibility-header {
+            margin-bottom: 16px;
+        }
+
+        .model-visibility-header h3 {
+            margin: 0;
+            font-size: 1.1em;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .model-visibility-header p {
+            margin: 8px 0 0;
+            color: var(--text-secondary);
+            font-size: 0.9375rem;
+        }
+
+        .model-provider-group {
+            margin-bottom: 16px;
+            padding: 12px;
+            background-color: var(--bg-secondary);
+            border-radius: 6px;
+        }
+
+        .model-provider-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .provider-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .provider-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .model-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .model-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: var(--bg-primary);
+        }
+
+        .model-name {
+            color: var(--text-primary);
+        }
+
+        .model-visibility-toggle {
+            background: none;
+            border: none;
+            padding: 4px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .model-visibility-toggle:hover {
+            background-color: var(--hover-bg);
+            color: var(--text-primary);
+        }
+
+        .model-visibility-toggle .material-icons-round {
+            font-size: 20px;
+        }
+
+        .warning-card {
+            margin: 16px 0;
+            padding: 12px 16px;
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 8px;
+            color: rgba(0, 0, 0, 0.85);
+        }
+
+        .warning-card p {
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .warning-card p::before {
+            content: "WARNING: ";
+            font-weight: 600;
+            color: rgb(220, 38, 38);
+        }
+
+        /* Dark theme override */
+        body:not(.light-theme) .warning-card {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .provider-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .provider-logo {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
         }
     `;
     document.head.appendChild(style);
@@ -923,4 +1400,32 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
 
     // Call setup function when document is ready
     setupArchetypeEditorFormatting();
+
+    // Add storage change listener
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === 'sync' && changes.modelProviderOrder) {
+            // Update the archetype editor's model select
+            chrome.runtime.sendMessage({ action: "getModelList" }, (response) => {
+                if (response && response.models) {
+                    const enhanceModelSelect = document.getElementById('enhance-model');
+                    if (enhanceModelSelect) {
+                        const truncatedModels = response.models.map(model => {
+                            const name = model.name
+                                .replace(' (OpenAI)', '')
+                                .replace(' (DeepSeek)', '')
+                                .replace(' (xAI)', '')
+                                .replace(' (Google)', '')
+                                .replace('Gemini ', '')
+                                .replace('-Lite', ' Lite');
+                            return { ...model, displayName: name };
+                        });
+                        
+                        enhanceModelSelect.innerHTML = truncatedModels
+                            .map(model => `<option value="${model.value}">${model.displayName}</option>`)
+                            .join('');
+                    }
+                }
+            });
+        }
+    });
 });

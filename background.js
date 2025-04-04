@@ -42,7 +42,43 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     }
 });
 
-// Function to load API keys from storage and generate available model list
+// Function to generate model list based on available API keys
+function generateModelList() {
+    return new Promise((resolve) => {
+        chrome.storage.sync.get(['modelProviderOrder'], (result) => {
+            const providerOrder = result.modelProviderOrder || ['OpenAI', 'Google', 'xAI', 'DeepSeek'];
+            const modelsByProvider = {
+                'OpenAI': openaiApiKey ? [
+                    { value: 'gpt-4o-mini-2024-07-18', name: '4o mini (OpenAI)' },
+                    { value: 'o1-mini-2024-09-12', name: 'o1 mini (OpenAI)'}
+                ] : [],
+                'xAI': grokApiKey ? [
+                    { value: 'grok-2', name: 'Grok-2 (xAI)' }
+                ] : [],
+                'DeepSeek': deepseekApiKey ? [
+                    { value: 'deepseek-chat', name: 'V3 Chat (DeepSeek)' },
+                    { value: 'deepseek-reasoner', name: 'R1 Reasoner (DeepSeek)' }
+                ] : [],
+                'Google': geminiApiKey ? [
+                    { value: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Google)' },
+                    { value: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash-Lite (Google)' }
+                ] : []
+            };
+
+            // Return models in the specified order
+            const models = [];
+            providerOrder.forEach(provider => {
+                if (modelsByProvider[provider]) {
+                    models.push(...modelsByProvider[provider]);
+                }
+            });
+            
+            resolve(models);
+        });
+    });
+}
+
+// Function to load API keys and generate available model list
 function loadApiKeysAndGenerateModelList() {
     chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey', 'geminiApiKey'], (result) => {
         openaiApiKey = result.openaiApiKey || '';
@@ -52,37 +88,17 @@ function loadApiKeysAndGenerateModelList() {
 
         console.log("API Keys loaded from storage.");
 
-        availableModels = generateModelList();
+        generateModelList().then(models => {
+            availableModels = models;
 
-        if (availableModels.length === 0) {
-            console.warn("Warning: No API keys configured. No AI models available.");
-        } else {
-            console.log("Available models:", availableModels.map(model => model.value));
-        }
+            if (availableModels.length === 0) {
+                console.warn("Warning: No API keys configured. No AI models available.");
+            } else {
+                console.log("Available models:", availableModels.map(model => model.value));
+            }
+        });
     });
 }
-
-// Function to generate model list based on available API keys
-function generateModelList() {
-    const models = [];
-    if (openaiApiKey) {
-        models.push({ value: 'gpt-4o-mini-2024-07-18', name: '4o mini (OpenAI)' });
-        models.push({ value: 'o1-mini-2024-09-12', name: 'o1 mini (OpenAI)'});
-    }
-    if (grokApiKey) {
-        models.push({ value: 'grok-2', name: 'Grok-2 (xAI)' });
-    }
-    if (deepseekApiKey) {
-        models.push({ value: 'deepseek-chat', name: 'V3 Chat (DeepSeek)' });
-        models.push({ value: 'deepseek-reasoner', name: 'R1 Reasoner (DeepSeek)' });
-    }
-    if (geminiApiKey) {
-        models.push({ value: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Google)' });
-        models.push({ value: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash-Lite (Google)' });
-    }
-    return models;
-}
-
 
 // Load API keys and generate model list initially
 loadApiKeysAndGenerateModelList();
@@ -143,7 +159,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             return true;
 
         case "getModelList":
-            sendResponse({ models: availableModels });
+            generateModelList().then(models => {
+                sendResponse({ models });
+            });
+            return true;
+
+        case "modelVisibilityUpdated":
+            // Notify all open popups about the visibility change
+            chrome.runtime.sendMessage({ 
+                action: "modelVisibilityUpdated",
+                visibility: request.visibility 
+            });
             return true;
 
         default:

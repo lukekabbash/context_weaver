@@ -123,11 +123,30 @@ h2 {
 }
 
 .api-key-section label {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 0.5rem;
     color: var(--text-primary);
     font-weight: 500;
     font-size: 0.9375rem;
+}
+
+.api-key-section img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    transition: filter 0.2s ease;
+}
+
+.api-key-section img[src*="OpenAI200"] {
+    width: 20.4px; /* 24px * 0.85 = 20.4px */
+    height: 20.4px;
+}
+
+/* Invert logos in light mode */
+.light-theme .api-key-section img {
+    filter: invert(1);
 }
 
 .api-key-section input[type="password"],
@@ -1211,4 +1230,132 @@ button:hover {
     background: transparent;
     color: var(--text-secondary);
     border: 1px solid var(--border);
+}
+
+.provider-logo {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    transition: filter 0.2s ease;
+}
+
+.provider-logo[src*="OpenAI200"] {
+    width: 20.4px; /* 24px * 0.85 = 20.4px */
+    height: 20.4px;
+}
+
+/* Invert logos in light mode */
+.light-theme .provider-logo {
+    filter: invert(1);
+}
+
+.model-provider-group {
+    margin-bottom: 16px;
+    padding: 12px;
+    background-color: var(--bg-secondary);
+    border-radius: 6px;
+    cursor: move;
+    transition: all 0.2s ease;
+}
+
+.model-provider-group.dragging {
+    opacity: 0.5;
+    transform: scale(1.02);
+    box-shadow: 0 4px 8px var(--shadow);
+}
+
+.drag-handle {
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+    cursor: move;
+    padding: 4px;
+    margin: -4px;
+    border-radius: 4px;
+}
+
+.drag-handle:hover {
+    background-color: var(--hover-bg);
+    color: var(--text-primary);
+}
+
+.drag-handle .material-icons-round {
+    font-size: 20px;
+}
+
+.provider-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.provider-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.model-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: var(--bg-primary);
+    cursor: move;
+    transition: all 0.2s ease;
+}
+
+.model-item.dragging {
+    opacity: 0.5;
+    transform: scale(1.02);
+    box-shadow: 0 2px 4px var(--shadow);
+}
+
+.model-drag-handle {
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+    cursor: move;
+    padding: 4px;
+    margin: -4px;
+    margin-right: 4px;
+    border-radius: 4px;
+}
+
+.model-drag-handle:hover {
+    background-color: var(--hover-bg);
+    color: var(--text-primary);
+}
+
+.model-drag-handle .material-icons-round {
+    font-size: 16px;
+}
+
+.model-name {
+    color: var(--text-primary);
+    flex: 1;
+    margin: 0 8px;
+}
+
+.model-visibility-toggle {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.model-visibility-toggle:hover {
+    background-color: var(--hover-bg);
+    color: var(--text-primary);
+}
+
+.model-visibility-toggle .material-icons-round {
+    font-size: 20px;
 }

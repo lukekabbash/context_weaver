@@ -87,12 +87,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startStreaming() {
+        responseDiv.innerHTML = '<div class="streaming-cursor"></div>';
         weaveButton.classList.add('loading');
-        responseDiv.innerHTML = '';
-        const streamingCursor = document.createElement('span');
-        streamingCursor.className = 'streaming-cursor';
-        responseDiv.appendChild(streamingCursor);
         popupState.isStreaming = true;
+        
+        // Update output label with current model
+        const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+        if (!selectedOption) {
+            document.querySelector('.model-name').textContent = 'Output:';
+            document.getElementById('provider-logo').src = '';
+            document.getElementById('provider-logo').alt = '';
+            return;
+        }
+        
+        let modelDisplayName = selectedOption.text.split(' (')[0];
+        const providerMatch = selectedOption.text.match(/\((.*?)\)$/);
+        const provider = providerMatch ? providerMatch[1] : '';
+        
+        // Set the provider logo based on the provider
+        const providerLogo = document.getElementById('provider-logo');
+        switch (provider) {
+            case 'OpenAI':
+                providerLogo.src = '/icons/ailogos/OpenAI200.png';
+                providerLogo.alt = 'OpenAI Logo';
+                break;
+            case 'Google':
+                providerLogo.src = '/icons/ailogos/Gemini200.png';
+                providerLogo.alt = 'Google Logo';
+                break;
+            case 'DeepSeek':
+                providerLogo.src = '/icons/ailogos/deepseek200.png';
+                providerLogo.alt = 'DeepSeek Logo';
+                break;
+            case 'xAI':
+                providerLogo.src = '/icons/ailogos/grok200.png';
+                providerLogo.alt = 'xAI Logo';
+                break;
+            default:
+                providerLogo.src = '';
+                providerLogo.alt = '';
+        }
+        
+        document.querySelector('.model-name').textContent = `${modelDisplayName} Output:`;
     }
 
     // Add function to convert all markdown formats to HTML
@@ -207,12 +243,41 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateOutputLabel(modelValue) {
         const selectedOption = modelSelect.options[modelSelect.selectedIndex];
         if (!selectedOption) {
-            outputLabel.textContent = 'Output:';
+            document.querySelector('.model-name').textContent = 'Output:';
+            document.getElementById('provider-logo').src = '';
+            document.getElementById('provider-logo').alt = '';
             return;
         }
         
         let modelDisplayName = selectedOption.text.split(' (')[0];
-        outputLabel.textContent = `${modelDisplayName} Output:`;
+        const providerMatch = selectedOption.text.match(/\((.*?)\)$/);
+        const provider = providerMatch ? providerMatch[1] : '';
+        
+        // Set the provider logo based on the provider
+        const providerLogo = document.getElementById('provider-logo');
+        switch (provider) {
+            case 'OpenAI':
+                providerLogo.src = '/icons/ailogos/OpenAI200.png';
+                providerLogo.alt = 'OpenAI Logo';
+                break;
+            case 'Google':
+                providerLogo.src = '/icons/ailogos/Gemini200.png';
+                providerLogo.alt = 'Google Logo';
+                break;
+            case 'DeepSeek':
+                providerLogo.src = '/icons/ailogos/deepseek200.png';
+                providerLogo.alt = 'DeepSeek Logo';
+                break;
+            case 'xAI':
+                providerLogo.src = '/icons/ailogos/grok200.png';
+                providerLogo.alt = 'xAI Logo';
+                break;
+            default:
+                providerLogo.src = '';
+                providerLogo.alt = '';
+        }
+        
+        document.querySelector('.model-name').textContent = `${modelDisplayName} Output:`;
     }
 
     function clearOutput() {
@@ -340,7 +405,6 @@ document.addEventListener('DOMContentLoaded', () => {
     modelSelect.addEventListener('change', () => {
         popupState.selectedModel = modelSelect.value;
         saveState();
-        updateOutputLabel(popupState.selectedModel);
     });
 
     personalitySelect.addEventListener('change', () => {
@@ -389,37 +453,40 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Check API keys and initialize models
-    chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey', 'geminiApiKey'], (result) => {
+    chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey', 'geminiApiKey', 'modelVisibility', 'modelProviderOrder'], (result) => {
         const openaiApiKeyPresent = !!result.openaiApiKey;
         const deepseekApiKeyPresent = !!result.deepseekApiKey;
         const grokApiKeyPresent = !!result.grokApiKey;
         const geminiApiKeyPresent = !!result.geminiApiKey;
-        apiKeysConfigured = openaiApiKeyPresent || deepseekApiKeyPresent || grokApiKeyPresent || geminiApiKeyPresent;
+        const modelVisibility = result.modelVisibility || {};
+        const providerOrder = result.modelProviderOrder || ['OpenAI', 'Google', 'xAI', 'DeepSeek'];
 
-        if (apiKeysConfigured) {
-            optionsHint.textContent = 'Weaver online. Add or remove API keys in plugin options.';
-            weaveButton.disabled = false;
+        if (openaiApiKeyPresent || deepseekApiKeyPresent || grokApiKeyPresent || geminiApiKeyPresent) {
             modelSelect.disabled = false;
+            weaveButton.disabled = false;
+            optionsHint.textContent = '';
 
             chrome.runtime.sendMessage({ action: "getModelList" }, (response) => {
-                if (response && response.models && response.models.length > 0) {
-                    const sortedModels = [...response.models].sort((a, b) => {
-                        const order = ['OpenAI', 'Grok', 'DeepSeek', 'Google'];
-                        const aBrand = a.name.includes('OpenAI') ? 'OpenAI' : 
-                                     (a.name.includes('DeepSeek') ? 'DeepSeek' : 
-                                     (a.name.includes('Grok') ? 'Grok' :
-                                     (a.name.includes('Google') ? 'Google' : 'Other')));
-                        const bBrand = b.name.includes('OpenAI') ? 'OpenAI' : 
-                                     (b.name.includes('DeepSeek') ? 'DeepSeek' : 
-                                     (b.name.includes('Grok') ? 'Grok' :
-                                     (b.name.includes('Google') ? 'Google' : 'Other')));
-                        return order.indexOf(aBrand) - order.indexOf(bBrand);
-                    });
+                if (response && response.models) {
+                    const sortedModels = [...response.models]
+                        // Filter out hidden models
+                        .filter(model => modelVisibility[model.value] !== false)
+                        .sort((a, b) => {
+                            // Extract provider names from model names
+                            const aProvider = a.name.match(/\((.*?)\)$/)[1];
+                            const bProvider = b.name.match(/\((.*?)\)$/)[1];
+                            // Get index from provider order
+                            const aIndex = providerOrder.indexOf(aProvider);
+                            const bIndex = providerOrder.indexOf(bProvider);
+                            // Sort by provider order
+                            return aIndex - bIndex;
+                        });
 
                     modelSelect.innerHTML = sortedModels
                         .map(model => `<option value="${model.value}">${model.name}</option>`)
                         .join('');
 
+                    // Update selected model
                     chrome.storage.local.get(['selectedModel'], (data) => {
                         if (data.selectedModel && sortedModels.some(model => model.value === data.selectedModel)) {
                             popupState.selectedModel = data.selectedModel;
@@ -528,11 +595,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Function to update archetype dropdown with correct order
     function updateArchetypeDropdown() {
-        chrome.storage.sync.get(['archetypePrompts', 'archetypeVisibility', 'archetypeOrder'], (result) => {
+        chrome.storage.sync.get(['archetypePrompts', 'archetypeVisibility', 'archetypeOrder', 'modelVisibility', 'modelProviderOrder'], (result) => {
             const prompts = result.archetypePrompts || {};
             const visibility = result.archetypeVisibility || {};
             const order = result.archetypeOrder || [];
+            const modelVisibility = result.modelVisibility || {};
+            const providerOrder = result.modelProviderOrder || ['OpenAI', 'Google', 'xAI', 'DeepSeek'];
             const select = document.getElementById('archetype-select');
+            const enhanceModelSelect = document.getElementById('enhance-model-select');
+            
+            if (enhanceModelSelect) {
+                // Get models from background
+                chrome.runtime.sendMessage({ action: "getModelList" }, (response) => {
+                    if (response && response.models) {
+                        const sortedModels = [...response.models]
+                            // Filter out hidden models
+                            .filter(model => modelVisibility[model.value] !== false)
+                            .sort((a, b) => {
+                                // Extract provider names from model names
+                                const aProvider = a.name.match(/\((.*?)\)$/)[1];
+                                const bProvider = b.name.match(/\((.*?)\)$/)[1];
+                                // Get index from provider order
+                                const aIndex = providerOrder.indexOf(aProvider);
+                                const bIndex = providerOrder.indexOf(bProvider);
+                                // Sort by provider order
+                                return aIndex - bIndex;
+                            });
+
+                        // Update the enhance model select
+                        enhanceModelSelect.innerHTML = sortedModels
+                            .map(model => {
+                                const name = model.name
+                                    .replace(' (OpenAI)', '')
+                                    .replace(' (DeepSeek)', '')
+                                    .replace(' (xAI)', '')
+                                    .replace(' (Google)', '')
+                                    .replace('Gemini ', '')
+                                    .replace('-Lite', ' Lite');
+                                return `<option value="${model.value}">${name}</option>`;
+                            })
+                            .join('');
+                    }
+                });
+            }
             
             // Clear existing options except "None"
             while (select.options.length > 1) {
@@ -559,4 +664,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial load of archetypes
     updateArchetypeDropdown();
+
+    // Add listener for model visibility and order updates
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === "modelVisibilityUpdated" || request.action === "modelProviderOrderUpdated") {
+            // Update both the main model select and archetype editor model select
+            updateModelSelects();
+        }
+    });
+
+    function updateModelSelects() {
+        chrome.storage.sync.get(['modelVisibility', 'modelProviderOrder'], (result) => {
+            const modelVisibility = result.modelVisibility || {};
+            const providerOrder = result.modelProviderOrder || ['OpenAI', 'Google', 'xAI', 'DeepSeek'];
+
+            // Get models from background
+            chrome.runtime.sendMessage({ action: "getModelList" }, (response) => {
+                if (response && response.models) {
+                    const sortedModels = [...response.models]
+                        // Filter out hidden models
+                        .filter(model => modelVisibility[model.value] !== false)
+                        .sort((a, b) => {
+                            // Extract provider names from model names
+                            const aProvider = a.name.match(/\((.*?)\)$/)[1];
+                            const bProvider = b.name.match(/\((.*?)\)$/)[1];
+                            // Get index from provider order
+                            const aIndex = providerOrder.indexOf(aProvider);
+                            const bIndex = providerOrder.indexOf(bProvider);
+                            // Sort by provider order
+                            return aIndex - bIndex;
+                        });
+
+                    // Update the main model select
+                    if (modelSelect) {
+                        modelSelect.innerHTML = sortedModels
+                            .map(model => `<option value="${model.value}">${model.name}</option>`)
+                            .join('');
+                    }
+
+                    // Update the enhance model select in archetype editor if it exists
+                    const enhanceModelSelect = document.getElementById('enhance-model-select');
+                    if (enhanceModelSelect) {
+                        enhanceModelSelect.innerHTML = sortedModels
+                            .map(model => {
+                                const name = model.name
+                                    .replace(' (OpenAI)', '')
+                                    .replace(' (DeepSeek)', '')
+                                    .replace(' (xAI)', '')
+                                    .replace(' (Google)', '')
+                                    .replace('Gemini ', '')
+                                    .replace('-Lite', ' Lite');
+                                return `<option value="${model.value}">${name}</option>`;
+                            })
+                            .join('');
+                    }
+
+                    // Ensure a valid model is selected
+                    if (!Array.from(modelSelect.options).some(opt => opt.value === popupState.selectedModel)) {
+                        if (modelSelect.options.length > 0) {
+                            popupState.selectedModel = modelSelect.options[0].value;
+                            saveState();
+                            applyStateToUI();
+                        }
+                    }
+                }
+            });
+        });
+    }
 });
