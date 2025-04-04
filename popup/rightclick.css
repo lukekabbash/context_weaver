@@ -1,0 +1,255 @@
+/* Styles specific to the right-click window */
+.right-click-window {
+    width: 400px;
+    height: 800px;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    box-sizing: border-box;
+    margin: 0 auto;
+    overflow-y: auto; /* Enable window scrolling */
+}
+
+.right-click-window .controls-container {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0; /* Prevent controls from shrinking */
+}
+
+.right-click-window #text-input {
+    height: 160px;
+    margin-bottom: 12px;
+    padding: 12px;
+    resize: none;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+    flex-shrink: 0;
+}
+
+.right-click-window .button-row {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0;
+    flex-shrink: 0;
+}
+
+.right-click-window .button-row button {
+    flex: 1;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.right-click-window select {
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.right-click-window .output-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--background-secondary);
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    margin-bottom: 16px; /* Add space for window scrolling */
+}
+
+.right-click-window #response {
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Remove flex constraints that might interfere with streaming */
+.right-click-window #response > * {
+    margin-bottom: 1em;
+}
+
+/* Ensure new content appears immediately */
+.right-click-window #response p,
+.right-click-window #response ul,
+.right-click-window #response ol,
+.right-click-window #response pre,
+.right-click-window #response blockquote {
+    margin: 0.75em 0;
+    min-height: 1em;
+}
+
+/* Preserve list formatting during streaming */
+.right-click-window #response ul,
+.right-click-window #response ol {
+    padding-left: 2em;
+    list-style-position: outside;
+}
+
+.right-click-window #response li {
+    margin: 0.25em 0;
+    display: list-item;
+}
+
+/* Ensure code blocks format immediately */
+.right-click-window #response pre,
+.right-click-window #response code {
+    display: block;
+    background-color: var(--background-secondary);
+    border-radius: 6px;
+    margin: 0.75em 0;
+}
+
+.right-click-window #response code {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    padding: 0.2em 0.4em;
+}
+
+/* Ensure inline elements format properly during streaming */
+.right-click-window #response strong,
+.right-click-window #response em,
+.right-click-window #response a {
+    display: inline;
+}
+
+/* Custom scrollbar styling */
+.right-click-window #response::-webkit-scrollbar {
+    width: 8px;
+}
+
+.right-click-window #response::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.right-click-window #response::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.right-click-window #response::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Markdown-style formatting */
+.right-click-window #response h1,
+.right-click-window #response h2,
+.right-click-window #response h3,
+.right-click-window #response h4,
+.right-click-window #response h5,
+.right-click-window #response h6 {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.right-click-window #response h1 { font-size: 1.5em; }
+.right-click-window #response h2 { font-size: 1.3em; }
+.right-click-window #response h3 { font-size: 1.2em; }
+.right-click-window #response h4 { font-size: 1.1em; }
+.right-click-window #response h5,
+.right-click-window #response h6 { font-size: 1em; }
+
+.right-click-window #response p {
+    margin: 0.75em 0;
+}
+
+.right-click-window #response a:hover {
+    text-decoration: underline;
+}
+
+.right-click-window #response blockquote {
+    margin: 0.5em 0;
+    padding-left: 1em;
+    border-left: 3px solid #e1e4e8;
+    color: #6a737d;
+}
+
+.right-click-window #response hr {
+    height: 1px;
+    background-color: #e1e4e8;
+    border: none;
+    margin: 1em 0;
+}
+
+/* Tables */
+.right-click-window #response table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+}
+
+.right-click-window #response th,
+.right-click-window #response td {
+    border: 1px solid #e1e4e8;
+    padding: 6px 13px;
+}
+
+.right-click-window #response th {
+    background-color: #f6f8fa;
+    font-weight: 600;
+}
+
+/* Utility classes */
+.right-click-window .stats-container {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    flex-shrink: 0;
+}
+
+.right-click-window #output-label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+/* Chain of thought styling */
+.right-click-window .chain-of-thought {
+    background-color: var(--background-secondary);
+    padding: 12px;
+    border-radius: 6px;
+    margin: 8px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Code block styling */
+.right-click-window pre {
+    background-color: var(--background-secondary);
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.right-click-window code {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+}
+
+/* Ensure proper spacing for inline code */
+.right-click-window p code {
+    background-color: var(--background-secondary);
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+/* Remove the body overflow restriction */
+.right-click-window body {
+    margin: 0;
+    padding: 0;
+} 

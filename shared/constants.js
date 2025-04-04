@@ -28,11 +28,11 @@ Your enhanced prompt should feel thorough and well-crafted, using sophisticated 
 };
 
 // Model provider order
-export const MODEL_PROVIDER_ORDER = ['OpenAI', 'Grok', 'DeepSeek'];
+export const MODEL_PROVIDER_ORDER = ['OpenAI', 'Grok', 'DeepSeek', 'Google'];
 
 // Storage keys
 export const STORAGE_KEYS = {
-    API_KEYS: ['openaiApiKey', 'deepseekApiKey', 'grokApiKey'],
+    API_KEYS: ['openaiApiKey', 'deepseekApiKey', 'grokApiKey', 'geminiApiKey'],
     ARCHETYPE: ['archetypePrompts', 'archetypeVisibility', 'archetypeOrder'],
     THEME: 'theme',
     SELECTED_MODEL: 'selectedModel',

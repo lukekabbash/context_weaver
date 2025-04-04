@@ -24,10 +24,6 @@
                 <span class="material-icons-round">key</span>
                 Configure API Keys
             </button>
-            <button class="tab-button" data-tab="chat">
-                <span class="material-icons-round">chat</span>
-                Continue Chat
-            </button>
         </div>
 
         <div id="archetypes-tab" class="tab-content active">
@@ -101,8 +97,9 @@
                 <p>Get your API keys from the respective AI model providers:</p>
                 <ul>
                     <li><a href="https://platform.openai.com/account/api-keys" target="_blank">OpenAI</a> - For GPT-4o mini and o1-mini models</li>
-                    <li><a href="https://platform.deepseek.ai" target="_blank">DeepSeek</a> - For DeepSeek's V3 Chat and R1 Reasoner models</li>
+                    <li><a href="https://platform.deepseek.com" target="_blank">DeepSeek</a> - For DeepSeek's V3 Chat and R1 Reasoner models</li>
                     <li><a href="https://x.ai" target="_blank">xAI</a> - For Grok 2 access</li>
+                    <li><a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a> - For Gemini models</li>
                 </ul>
                 <p>Your API keys are stored in your browser's sync storage and are only used to authenticate requests to the respective AI services. Context Weaver does not collect or transmit your API keys to any other services. See warning for details.</p>
             </div>
@@ -113,18 +110,22 @@
                 </p>
 
                 <div class="api-key-section">
-                    <label for="openai-api-key">OpenAI API Key (GPT):</label>
-                    <input type="password" id="openai-api-key" placeholder="OpenAI API Key">
-                </div>
-
-                <div class="api-key-section">
-                    <label for="deepseek-api-key">DeepSeek API Key (V3 & R1):</label>
-                    <input type="password" id="deepseek-api-key" placeholder="DeepSeek API Key">
-                </div>
-
-                <div class="api-key-section">
-                    <label for="grok-api-key">xAI API Key (Grok):</label>
-                    <input type="password" id="grok-api-key" placeholder="Grok API Key">
+                    <div class="api-key-input">
+                        <label for="openai-api-key">OpenAI API Key:</label>
+                        <input type="password" id="openai-api-key" placeholder="Enter your OpenAI API key">
+                    </div>
+                    <div class="api-key-input">
+                        <label for="deepseek-api-key">DeepSeek API Key:</label>
+                        <input type="password" id="deepseek-api-key" placeholder="Enter your DeepSeek API key">
+                    </div>
+                    <div class="api-key-input">
+                        <label for="grok-api-key">Grok API Key:</label>
+                        <input type="password" id="grok-api-key" placeholder="Enter your Grok API key">
+                    </div>
+                    <div class="api-key-input">
+                        <label for="gemini-api-key">Gemini API Key:</label>
+                        <input type="password" id="gemini-api-key" placeholder="Enter your Gemini API key">
+                    </div>
                 </div>
 
                 <button id="save-keys-button" class="primary-button">
@@ -138,43 +139,11 @@
             </div>
         </div>
 
-        <div id="chat-tab" class="tab-content">
-            <div class="chat-container">
-                <div class="chat-header">
-                    <div class="model-selector">
-                        <label for="chat-model-select">Model:</label>
-                        <select id="chat-model-select" class="select-dropdown"></select>
-                    </div>
-                    <div class="archetype-selector">
-                        <label for="chat-archetype-select">Select Archetype:</label>
-                        <select id="chat-archetype-select" class="select-dropdown">
-                            <option value="None">No Archetype Selected</option>
-                        </select>
-                    </div>
-                    <button id="clear-chat" class="icon-button delete-button" title="Clear chat">
-                        <span class="material-icons-round">delete_sweep</span>
-                    </button>
-                </div>
-                
-                <div class="chat-messages" id="chat-messages">
-                    <!-- Messages will be inserted here -->
-                </div>
-
-                <div class="chat-input-container">
-                    <textarea id="chat-input" placeholder="Type your message..." rows="1"></textarea>
-                    <button id="send-chat" class="primary-button">
-                        <span class="material-icons-round">send</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <p class="attribution-text">
             By: Luke Kabbash (<a href="https://x.com/LukeKabbash" target="_blank">@LukeKabbash</a> on X)
         </p>
     </div>
 
     <script src="options.js"></script>
-    <script src="chatbot.js"></script>
 </body>
 </html>

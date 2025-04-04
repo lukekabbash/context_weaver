@@ -15,6 +15,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const outputTokenCount = document.getElementById('output-token-count');
     const archetypePrompt = document.getElementById('archetype-prompt');
 
+    // Check if this is a right-click window
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldAutoWeave = urlParams.get('autoWeave') === 'true';
+    const isRightClickWindow = urlParams.get('windowType') === 'rightClick';
+
+    // Apply right-click window styles if needed
+    if (isRightClickWindow) {
+        document.body.classList.add('right-click-window');
+        
+        // Dynamically load the right-click CSS
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'rightclick.css';
+        document.head.appendChild(link);
+    }
+
     let popupState = {
         inputText: "",
         selectedModel: 'gpt-4o-mini-2024-07-18',
@@ -26,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let apiKeysConfigured = false;
     let streamController = null;
+    let autoWeaveInitiated = false;
 
     function toggleTheme() {
         const newTheme = document.body.classList.contains('light-theme') ? 'dark' : 'light';
@@ -153,11 +171,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const cursor = responseDiv.querySelector('.streaming-cursor');
         if (cursor) {
             // Process chain of thought and markdown formatting
-            const processedChunk = processChainOfThought(convertMarkdownToHtml(chunk));
-            cursor.insertAdjacentHTML('beforebegin', processedChunk);
+            const processedChunk = processChainOfThought(chunk);
+            
+            // Convert markdown to HTML for the chunk
+            const formattedChunk = convertMarkdownToHtml(processedChunk);
+            
+            // Insert the formatted chunk before the cursor
+            cursor.insertAdjacentHTML('beforebegin', formattedChunk);
+            
+            // Ensure proper scrolling
             responseDiv.scrollTop = responseDiv.scrollHeight;
+            
             // Update output counts
-            updateOutputCounts(responseDiv.textContent);
+            const currentText = responseDiv.textContent;
+            updateOutputCounts(currentText);
         }
     }
 
@@ -165,12 +192,26 @@ document.addEventListener('DOMContentLoaded', () => {
         weaveButton.classList.remove('loading');
         const cursor = responseDiv.querySelector('.streaming-cursor');
         if (cursor) cursor.remove();
+        
+        // Format the entire output text after streaming ends
+        const currentText = responseDiv.textContent;
+        setHtmlContent(responseDiv, currentText);
+        
+        // Update state and counts
+        popupState.outputText = currentText;
         popupState.isStreaming = false;
+        updateOutputCounts(currentText);
+        saveState();
     }
 
     function updateOutputLabel(modelValue) {
-        let modelDisplayNameFull = modelSelect.options[modelSelect.selectedIndex].text;
-        let modelDisplayName = modelDisplayNameFull.split(' (')[0];
+        const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+        if (!selectedOption) {
+            outputLabel.textContent = 'Output:';
+            return;
+        }
+        
+        let modelDisplayName = selectedOption.text.split(' (')[0];
         outputLabel.textContent = `${modelDisplayName} Output:`;
     }
 
@@ -328,28 +369,32 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeTheme();
     restoreState();
 
+    // Get the stored text when popup opens
     chrome.runtime.sendMessage({ action: "getText" }, (response) => {
         if (response && response.text) {
-            // Only clear output if the input text has changed
-            if (response.text !== popupState.inputText) {
-                popupState.inputText = response.text;
-                popupState.outputText = "";
-                responseDiv.innerHTML = '';
-                updateOutputCounts('');
-            } else {
-                popupState.inputText = response.text;
-            }
+            textInput.value = response.text;
+            popupState.inputText = response.text;
+            updateCharCount();
             saveState();
-            applyStateToUI();
+
+            // Only auto-weave if opened from context menu
+            if (shouldAutoWeave && !autoWeaveInitiated && !weaveButton.disabled) {
+                autoWeaveInitiated = true;
+                // Small delay to ensure model list and other components are loaded
+                setTimeout(() => {
+                    weaveButton.click();
+                }, 500);
+            }
         }
     });
 
     // Check API keys and initialize models
-    chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey'], (result) => {
+    chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey', 'geminiApiKey'], (result) => {
         const openaiApiKeyPresent = !!result.openaiApiKey;
         const deepseekApiKeyPresent = !!result.deepseekApiKey;
         const grokApiKeyPresent = !!result.grokApiKey;
-        apiKeysConfigured = openaiApiKeyPresent || deepseekApiKeyPresent || grokApiKeyPresent;
+        const geminiApiKeyPresent = !!result.geminiApiKey;
+        apiKeysConfigured = openaiApiKeyPresent || deepseekApiKeyPresent || grokApiKeyPresent || geminiApiKeyPresent;
 
         if (apiKeysConfigured) {
             optionsHint.textContent = 'Weaver online. Add or remove API keys in plugin options.';
@@ -359,13 +404,15 @@ document.addEventListener('DOMContentLoaded', () => {
             chrome.runtime.sendMessage({ action: "getModelList" }, (response) => {
                 if (response && response.models && response.models.length > 0) {
                     const sortedModels = [...response.models].sort((a, b) => {
-                        const order = ['OpenAI', 'Grok', 'DeepSeek'];
+                        const order = ['OpenAI', 'Grok', 'DeepSeek', 'Google'];
                         const aBrand = a.name.includes('OpenAI') ? 'OpenAI' : 
                                      (a.name.includes('DeepSeek') ? 'DeepSeek' : 
-                                     (a.name.includes('Grok') ? 'Grok' : 'Other'));
+                                     (a.name.includes('Grok') ? 'Grok' :
+                                     (a.name.includes('Google') ? 'Google' : 'Other')));
                         const bBrand = b.name.includes('OpenAI') ? 'OpenAI' : 
                                      (b.name.includes('DeepSeek') ? 'DeepSeek' : 
-                                     (b.name.includes('Grok') ? 'Grok' : 'Other'));
+                                     (b.name.includes('Grok') ? 'Grok' :
+                                     (b.name.includes('Google') ? 'Google' : 'Other')));
                         return order.indexOf(aBrand) - order.indexOf(bBrand);
                     });
 

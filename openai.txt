@@ -1,0 +1,7436 @@
+Introduction
+This API reference describes the RESTful, streaming, and realtime APIs you can use to interact with the OpenAI platform. REST APIs are usable via HTTP in any environment that supports HTTP requests. Language-specific SDKs are listed on the libraries page.
+
+Authentication
+The OpenAI API uses API keys for authentication. Create, manage, and learn more about API keys in your organization settings.
+
+Remember that your API key is a secret! Do not share it with others or expose it in any client-side code (browsers, apps). API keys should be securely loaded from an environment variable or key management service on the server.
+
+API keys should be provided via HTTP Bearer authentication.
+
+Authorization: Bearer OPENAI_API_KEY
+If you belong to multiple organizations or access projects through a legacy user API key, pass a header to specify which organization and project to use for an API request:
+
+curl https://api.openai.com/v1/models \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "OpenAI-Organization: YOUR_ORG_ID" \
+  -H "OpenAI-Project: $PROJECT_ID"
+Usage from these API requests counts as usage for the specified organization and project.Organization IDs can be found on your organization settings page. Project IDs can be found on your general settings page by selecting the specific project.
+
+Debugging requests
+In addition to error codes returned from API responses, you can inspect HTTP response headers containing the unique ID of a particular API request or information about rate limiting applied to your requests. Below is an incomplete list of HTTP headers returned with API responses:
+
+API meta information
+
+openai-organization: The organization associated with the request
+openai-processing-ms: Time taken processing your API request
+openai-version: REST API version used for this request (currently 2020-10-01)
+x-request-id: Unique identifier for this API request (used in troubleshooting)
+Rate limiting information
+
+x-ratelimit-limit-requests
+x-ratelimit-limit-tokens
+x-ratelimit-remaining-requests
+x-ratelimit-remaining-tokens
+x-ratelimit-reset-requests
+x-ratelimit-reset-tokens
+OpenAI recommends logging request IDs in production deployments for more efficient troubleshooting with our support team, should the need arise. Our official SDKs provide a property on top-level response objects containing the value of the x-request-id header.
+
+Backward compatibility
+OpenAI is committed to providing stability to API users by avoiding breaking changes in major API versions whenever reasonably possible. This includes:
+
+The REST API (currently v1)
+Our first-party SDKs (released SDKs adhere to semantic versioning)
+Model families (like gpt-4o or o1-mini)
+Model prompting behavior between snapshots is subject to change. Model outputs are by their nature variable, so expect changes in prompting and model behavior between snapshots. For example, if you moved from gpt-4o-2024-05-13 to gpt-4o-2024-08-06, the same system or user messages could function differently between versions. The best way to ensure consistent prompting behavior and model output is to use pinned model versions, and to implement evals for your applications.
+
+Backwards-compatible API changes:
+
+Adding new resources (URLs) to the REST API and SDKs
+Adding new optional API parameters
+Adding new properties to JSON response objects or event data
+Changing the order of properties in a JSON response object
+Changing the length or format of opaque strings, like resource identifiers and UUIDs
+Adding new event types (in either streaming or the Realtime API)
+See the changelog for a list of backwards-compatible changes and rare breaking changes.
+
+Responses
+OpenAI's most advanced interface for generating model responses. Supports text and image inputs, and text outputs. Create stateful interactions with the model, using the output of previous responses as input. Extend the model's capabilities with built-in tools for file search, web search, computer use, and more. Allow the model access to external systems and data using function calling.
+
+Related guides:
+
+Quickstart
+Text inputs and outputs
+Image inputs
+Structured Outputs
+Function calling
+Conversation state
+Extend the models with tools
+Create a model response
+post
+ 
+https://api.openai.com/v1/responses
+Creates a model response. Provide text or image inputs to generate text or JSON outputs. Have the model call your own custom code or use built-in tools like web search or file search to use your own data as input for the model's response.
+
+Request body
+input
+string or array
+
+Required
+Text, image, or file inputs to the model, used to generate a response.
+
+Learn more:
+
+Text inputs and outputs
+Image inputs
+File inputs
+Conversation state
+Function calling
+
+Show possible types
+model
+string
+
+Required
+Model ID used to generate the response, like gpt-4o or o1. OpenAI offers a wide range of models with different capabilities, performance characteristics, and price points. Refer to the model guide to browse and compare available models.
+
+include
+array or null
+
+Optional
+Specify additional output data to include in the model response. Currently supported values are:
+
+file_search_call.results: Include the search results of the file search tool call.
+message.input_image.image_url: Include image urls from the input message.
+computer_call_output.output.image_url: Include image urls from the computer call output.
+instructions
+string or null
+
+Optional
+Inserts a system (or developer) message as the first item in the model's context.
+
+When using along with previous_response_id, the instructions from a previous response will not be carried over to the next response. This makes it simple to swap out system (or developer) messages in new responses.
+
+max_output_tokens
+integer or null
+
+Optional
+An upper bound for the number of tokens that can be generated for a response, including visible output tokens and reasoning tokens.
+
+metadata
+map
+
+Optional
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+parallel_tool_calls
+boolean or null
+
+Optional
+Defaults to true
+Whether to allow the model to run tool calls in parallel.
+
+previous_response_id
+string or null
+
+Optional
+The unique ID of the previous response to the model. Use this to create multi-turn conversations. Learn more about conversation state.
+
+reasoning
+object or null
+
+Optional
+o-series models only
+
+Configuration options for reasoning models.
+
+
+Show properties
+store
+boolean or null
+
+Optional
+Defaults to true
+Whether to store the generated model response for later retrieval via API.
+
+stream
+boolean or null
+
+Optional
+Defaults to false
+If set to true, the model response data will be streamed to the client as it is generated using server-sent events. See the Streaming section below for more information.
+
+temperature
+number or null
+
+Optional
+Defaults to 1
+What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. We generally recommend altering this or top_p but not both.
+
+text
+object
+
+Optional
+Configuration options for a text response from the model. Can be plain text or structured JSON data. Learn more:
+
+Text inputs and outputs
+Structured Outputs
+
+Show properties
+tool_choice
+string or object
+
+Optional
+How the model should select which tool (or tools) to use when generating a response. See the tools parameter to see how to specify which tools the model can call.
+
+
+Show possible types
+tools
+array
+
+Optional
+An array of tools the model may call while generating a response. You can specify which tool to use by setting the tool_choice parameter.
+
+The two categories of tools you can provide the model are:
+
+Built-in tools: Tools that are provided by OpenAI that extend the model's capabilities, like web search or file search. Learn more about built-in tools.
+Function calls (custom tools): Functions that are defined by you, enabling the model to call your own code. Learn more about function calling.
+
+Show possible types
+top_p
+number or null
+
+Optional
+Defaults to 1
+An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered.
+
+We generally recommend altering this or temperature but not both.
+
+truncation
+string or null
+
+Optional
+Defaults to disabled
+The truncation strategy to use for the model response.
+
+auto: If the context of this response and previous ones exceeds the model's context window size, the model will truncate the response to fit the context window by dropping input items in the middle of the conversation.
+disabled (default): If a model response will exceed the context window size for a model, the request will fail with a 400 error.
+user
+string
+
+Optional
+A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse. Learn more.
+
+Returns
+Returns a Response object.
+
+
+Text input
+
+Image input
+
+Web search
+
+File search
+
+Streaming
+
+Functions
+
+Reasoning
+Example request
+curl https://api.openai.com/v1/responses \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "model": "gpt-4o",
+    "input": "Tell me a three sentence bedtime story about a unicorn."
+  }'
+Response
+{
+  "id": "resp_67ccd2bed1ec8190b14f964abc0542670bb6a6b452d3795b",
+  "object": "response",
+  "created_at": 1741476542,
+  "status": "completed",
+  "error": null,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "model": "gpt-4o-2024-08-06",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_67ccd2bf17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "In a peaceful grove beneath a silver moon, a unicorn named Lumina discovered a hidden pool that reflected the stars. As she dipped her horn into the water, the pool began to shimmer, revealing a pathway to a magical realm of endless night skies. Filled with wonder, Lumina whispered a wish for all who dream to find their own hidden magic, and as she glanced back, her hoofprints sparkled like stardust.",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "parallel_tool_calls": true,
+  "previous_response_id": null,
+  "reasoning": {
+    "effort": null,
+    "generate_summary": null
+  },
+  "store": true,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    }
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 36,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 87,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 123
+  },
+  "user": null,
+  "metadata": {}
+}
+Get a model response
+get
+ 
+https://api.openai.com/v1/responses/{response_id}
+Retrieves a model response with the given ID.
+
+Path parameters
+response_id
+string
+
+Required
+The ID of the response to retrieve.
+
+Query parameters
+include
+array
+
+Optional
+Additional fields to include in the response. See the include parameter for Response creation above for more information.
+
+Returns
+The Response object matching the specified ID.
+
+Example request
+curl https://api.openai.com/v1/responses/resp_123 \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "id": "resp_67cb71b351908190a308f3859487620d06981a8637e6bc44",
+  "object": "response",
+  "created_at": 1741386163,
+  "status": "completed",
+  "error": null,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "model": "gpt-4o-2024-08-06",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_67cb71b3c2b0819084d481baaaf148f206981a8637e6bc44",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Silent circuits hum,  \nThoughts emerge in data streams—  \nDigital dawn breaks.",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "parallel_tool_calls": true,
+  "previous_response_id": null,
+  "reasoning": {
+    "effort": null,
+    "generate_summary": null
+  },
+  "store": true,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    }
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 32,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 18,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 50
+  },
+  "user": null,
+  "metadata": {}
+}
+Delete a model response
+delete
+ 
+https://api.openai.com/v1/responses/{response_id}
+Deletes a model response with the given ID.
+
+Path parameters
+response_id
+string
+
+Required
+The ID of the response to delete.
+
+Returns
+A success message.
+
+Example request
+curl -X DELETE https://api.openai.com/v1/responses/resp_123 \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "id": "resp_6786a1bec27481909a17d673315b29f6",
+  "object": "response",
+  "deleted": true
+}
+List input items
+get
+ 
+https://api.openai.com/v1/responses/{response_id}/input_items
+Returns a list of input items for a given response.
+
+Path parameters
+response_id
+string
+
+Required
+The ID of the response to retrieve input items for.
+
+Query parameters
+after
+string
+
+Optional
+An item ID to list items after, used in pagination.
+
+before
+string
+
+Optional
+An item ID to list items before, used in pagination.
+
+include
+array
+
+Optional
+Additional fields to include in the response. See the include parameter for Response creation above for more information.
+
+limit
+integer
+
+Optional
+Defaults to 20
+A limit on the number of objects to be returned. Limit can range between 1 and 100, and the default is 20.
+
+order
+string
+
+Optional
+The order to return the input items in. Default is asc.
+
+asc: Return the input items in ascending order.
+desc: Return the input items in descending order.
+Returns
+A list of input item objects.
+
+Example request
+curl https://api.openai.com/v1/responses/resp_abc123/input_items \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "msg_abc123",
+      "type": "message",
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Tell me a three sentence bedtime story about a unicorn."
+        }
+      ]
+    }
+  ],
+  "first_id": "msg_abc123",
+  "last_id": "msg_abc123",
+  "has_more": false
+}
+The response object
+created_at
+number
+
+Unix timestamp (in seconds) of when this Response was created.
+
+error
+object or null
+
+An error object returned when the model fails to generate a Response.
+
+
+Show properties
+id
+string
+
+Unique identifier for this Response.
+
+incomplete_details
+object or null
+
+Details about why the response is incomplete.
+
+
+Show properties
+instructions
+string or null
+
+Inserts a system (or developer) message as the first item in the model's context.
+
+When using along with previous_response_id, the instructions from a previous response will not be carried over to the next response. This makes it simple to swap out system (or developer) messages in new responses.
+
+max_output_tokens
+integer or null
+
+An upper bound for the number of tokens that can be generated for a response, including visible output tokens and reasoning tokens.
+
+metadata
+map
+
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+model
+string
+
+Model ID used to generate the response, like gpt-4o or o1. OpenAI offers a wide range of models with different capabilities, performance characteristics, and price points. Refer to the model guide to browse and compare available models.
+
+object
+string
+
+The object type of this resource - always set to response.
+
+output
+array
+
+An array of content items generated by the model.
+
+The length and order of items in the output array is dependent on the model's response.
+Rather than accessing the first item in the output array and assuming it's an assistant message with the content generated by the model, you might consider using the output_text property where supported in SDKs.
+
+Show possible types
+output_text
+string or null
+
+SDK Only
+SDK-only convenience property that contains the aggregated text output from all output_text items in the output array, if any are present. Supported in the Python and JavaScript SDKs.
+
+parallel_tool_calls
+boolean
+
+Whether to allow the model to run tool calls in parallel.
+
+previous_response_id
+string or null
+
+The unique ID of the previous response to the model. Use this to create multi-turn conversations. Learn more about conversation state.
+
+reasoning
+object or null
+
+o-series models only
+
+Configuration options for reasoning models.
+
+
+Show properties
+status
+string
+
+The status of the response generation. One of completed, failed, in_progress, or incomplete.
+
+temperature
+number or null
+
+What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. We generally recommend altering this or top_p but not both.
+
+text
+object
+
+Configuration options for a text response from the model. Can be plain text or structured JSON data. Learn more:
+
+Text inputs and outputs
+Structured Outputs
+
+Show properties
+tool_choice
+string or object
+
+How the model should select which tool (or tools) to use when generating a response. See the tools parameter to see how to specify which tools the model can call.
+
+
+Show possible types
+tools
+array
+
+An array of tools the model may call while generating a response. You can specify which tool to use by setting the tool_choice parameter.
+
+The two categories of tools you can provide the model are:
+
+Built-in tools: Tools that are provided by OpenAI that extend the model's capabilities, like web search or file search. Learn more about built-in tools.
+Function calls (custom tools): Functions that are defined by you, enabling the model to call your own code. Learn more about function calling.
+
+Show possible types
+top_p
+number or null
+
+An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered.
+
+We generally recommend altering this or temperature but not both.
+
+truncation
+string or null
+
+The truncation strategy to use for the model response.
+
+auto: If the context of this response and previous ones exceeds the model's context window size, the model will truncate the response to fit the context window by dropping input items in the middle of the conversation.
+disabled (default): If a model response will exceed the context window size for a model, the request will fail with a 400 error.
+usage
+object
+
+Represents token usage details including input tokens, output tokens, a breakdown of output tokens, and the total tokens used.
+
+
+Show properties
+user
+string
+
+A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse. Learn more.
+
+OBJECT The response object
+{
+  "id": "resp_67ccd3a9da748190baa7f1570fe91ac604becb25c45c1d41",
+  "object": "response",
+  "created_at": 1741476777,
+  "status": "completed",
+  "error": null,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "model": "gpt-4o-2024-08-06",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_67ccd3acc8d48190a77525dc6de64b4104becb25c45c1d41",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "The image depicts a scenic landscape with a wooden boardwalk or pathway leading through lush, green grass under a blue sky with some clouds. The setting suggests a peaceful natural area, possibly a park or nature reserve. There are trees and shrubs in the background.",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "parallel_tool_calls": true,
+  "previous_response_id": null,
+  "reasoning": {
+    "effort": null,
+    "generate_summary": null
+  },
+  "store": true,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    }
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 328,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 52,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 380
+  },
+  "user": null,
+  "metadata": {}
+}
+The input item list
+A list of Response items.
+
+data
+array
+
+A list of items used to generate this response.
+
+
+Show possible types
+first_id
+string
+
+The ID of the first item in the list.
+
+has_more
+boolean
+
+Whether there are more items available.
+
+last_id
+string
+
+The ID of the last item in the list.
+
+object
+string
+
+The type of object returned, must be list.
+
+OBJECT The input item list
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "msg_abc123",
+      "type": "message",
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Tell me a three sentence bedtime story about a unicorn."
+        }
+      ]
+    }
+  ],
+  "first_id": "msg_abc123",
+  "last_id": "msg_abc123",
+  "has_more": false
+}
+Streaming
+When you create a Response with stream set to true, the server will emit server-sent events to the client as the Response is generated. This section contains the events that are emitted by the server.
+
+Learn more about streaming responses.
+
+response.created
+An event that is emitted when a response is created.
+
+response
+object
+
+The response that was created.
+
+
+Show properties
+type
+string
+
+The type of the event. Always response.created.
+
+OBJECT response.created
+{
+  "type": "response.created",
+  "response": {
+    "id": "resp_67ccfcdd16748190a91872c75d38539e09e4d4aac714747c",
+    "object": "response",
+    "created_at": 1741487325,
+    "status": "in_progress",
+    "error": null,
+    "incomplete_details": null,
+    "instructions": null,
+    "max_output_tokens": null,
+    "model": "gpt-4o-2024-08-06",
+    "output": [],
+    "parallel_tool_calls": true,
+    "previous_response_id": null,
+    "reasoning": {
+      "effort": null,
+      "generate_summary": null
+    },
+    "store": true,
+    "temperature": 1,
+    "text": {
+      "format": {
+        "type": "text"
+      }
+    },
+    "tool_choice": "auto",
+    "tools": [],
+    "top_p": 1,
+    "truncation": "disabled",
+    "usage": null,
+    "user": null,
+    "metadata": {}
+  }
+}
+response.in_progress
+Emitted when the response is in progress.
+
+response
+object
+
+The response that is in progress.
+
+
+Show properties
+type
+string
+
+The type of the event. Always response.in_progress.
+
+OBJECT response.in_progress
+{
+  "type": "response.in_progress",
+  "response": {
+    "id": "resp_67ccfcdd16748190a91872c75d38539e09e4d4aac714747c",
+    "object": "response",
+    "created_at": 1741487325,
+    "status": "in_progress",
+    "error": null,
+    "incomplete_details": null,
+    "instructions": null,
+    "max_output_tokens": null,
+    "model": "gpt-4o-2024-08-06",
+    "output": [],
+    "parallel_tool_calls": true,
+    "previous_response_id": null,
+    "reasoning": {
+      "effort": null,
+      "generate_summary": null
+    },
+    "store": true,
+    "temperature": 1,
+    "text": {
+      "format": {
+        "type": "text"
+      }
+    },
+    "tool_choice": "auto",
+    "tools": [],
+    "top_p": 1,
+    "truncation": "disabled",
+    "usage": null,
+    "user": null,
+    "metadata": {}
+  }
+}
+response.completed
+Emitted when the model response is complete.
+
+response
+object
+
+Properties of the completed response.
+
+
+Show properties
+type
+string
+
+The type of the event. Always response.completed.
+
+OBJECT response.completed
+{
+  "type": "response.completed",
+  "response": {
+    "id": "resp_123",
+    "object": "response",
+    "created_at": 1740855869,
+    "status": "completed",
+    "error": null,
+    "incomplete_details": null,
+    "input": [],
+    "instructions": null,
+    "max_output_tokens": null,
+    "model": "gpt-4o-mini-2024-07-18",
+    "output": [
+      {
+        "id": "msg_123",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "In a shimmering forest under a sky full of stars, a lonely unicorn named Lila discovered a hidden pond that glowed with moonlight. Every night, she would leave sparkling, magical flowers by the water's edge, hoping to share her beauty with others. One enchanting evening, she woke to find a group of friendly animals gathered around, eager to be friends and share in her magic.",
+            "annotations": []
+          }
+        ]
+      }
+    ],
+    "previous_response_id": null,
+    "reasoning_effort": null,
+    "store": false,
+    "temperature": 1,
+    "text": {
+      "format": {
+        "type": "text"
+      }
+    },
+    "tool_choice": "auto",
+    "tools": [],
+    "top_p": 1,
+    "truncation": "disabled",
+    "usage": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "user": null,
+    "metadata": {}
+  }
+}
+response.failed
+An event that is emitted when a response fails.
+
+response
+object
+
+The response that failed.
+
+
+Show properties
+type
+string
+
+The type of the event. Always response.failed.
+
+OBJECT response.failed
+{
+  "type": "response.failed",
+  "response": {
+    "id": "resp_123",
+    "object": "response",
+    "created_at": 1740855869,
+    "status": "failed",
+    "error": {
+      "code": "server_error",
+      "message": "The model failed to generate a response."
+    },
+    "incomplete_details": null,
+    "instructions": null,
+    "max_output_tokens": null,
+    "model": "gpt-4o-mini-2024-07-18",
+    "output": [],
+    "previous_response_id": null,
+    "reasoning_effort": null,
+    "store": false,
+    "temperature": 1,
+    "text": {
+      "format": {
+        "type": "text"
+      }
+    },
+    "tool_choice": "auto",
+    "tools": [],
+    "top_p": 1,
+    "truncation": "disabled",
+    "usage": null,
+    "user": null,
+    "metadata": {}
+  }
+}
+response.incomplete
+An event that is emitted when a response finishes as incomplete.
+
+response
+object
+
+The response that was incomplete.
+
+
+Show properties
+type
+string
+
+The type of the event. Always response.incomplete.
+
+OBJECT response.incomplete
+{
+  "type": "response.incomplete",
+  "response": {
+    "id": "resp_123",
+    "object": "response",
+    "created_at": 1740855869,
+    "status": "incomplete",
+    "error": null, 
+    "incomplete_details": {
+      "reason": "max_tokens"
+    },
+    "instructions": null,
+    "max_output_tokens": null,
+    "model": "gpt-4o-mini-2024-07-18",
+    "output": [],
+    "previous_response_id": null,
+    "reasoning_effort": null,
+    "store": false,
+    "temperature": 1,
+    "text": {
+      "format": {
+        "type": "text"
+      }
+    },
+    "tool_choice": "auto",
+    "tools": [],
+    "top_p": 1,
+    "truncation": "disabled",
+    "usage": null,
+    "user": null,
+    "metadata": {}
+  }
+}
+response.output_item.added
+Emitted when a new output item is added.
+
+item
+object
+
+The output item that was added.
+
+
+Show possible types
+output_index
+integer
+
+The index of the output item that was added.
+
+type
+string
+
+The type of the event. Always response.output_item.added.
+
+OBJECT response.output_item.added
+{
+  "type": "response.output_item.added",
+  "output_index": 0,
+  "item": {
+    "id": "msg_123",
+    "status": "in_progress",
+    "type": "message",
+    "role": "assistant",
+    "content": []
+  }
+}
+response.output_item.done
+Emitted when an output item is marked done.
+
+item
+object
+
+The output item that was marked done.
+
+
+Show possible types
+output_index
+integer
+
+The index of the output item that was marked done.
+
+type
+string
+
+The type of the event. Always response.output_item.done.
+
+OBJECT response.output_item.done
+{
+  "type": "response.output_item.done",
+  "output_index": 0,
+  "item": {
+    "id": "msg_123",
+    "status": "completed",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "output_text",
+        "text": "In a shimmering forest under a sky full of stars, a lonely unicorn named Lila discovered a hidden pond that glowed with moonlight. Every night, she would leave sparkling, magical flowers by the water's edge, hoping to share her beauty with others. One enchanting evening, she woke to find a group of friendly animals gathered around, eager to be friends and share in her magic.",
+        "annotations": []
+      }
+    ]
+  }
+}
+response.content_part.added
+Emitted when a new content part is added.
+
+content_index
+integer
+
+The index of the content part that was added.
+
+item_id
+string
+
+The ID of the output item that the content part was added to.
+
+output_index
+integer
+
+The index of the output item that the content part was added to.
+
+part
+object
+
+The content part that was added.
+
+
+Show possible types
+type
+string
+
+The type of the event. Always response.content_part.added.
+
+OBJECT response.content_part.added
+{
+  "type": "response.content_part.added",
+  "item_id": "msg_123",
+  "output_index": 0,
+  "content_index": 0,
+  "part": {
+    "type": "output_text",
+    "text": "",
+    "annotations": []
+  }
+}
+response.content_part.done
+Emitted when a content part is done.
+
+content_index
+integer
+
+The index of the content part that is done.
+
+item_id
+string
+
+The ID of the output item that the content part was added to.
+
+output_index
+integer
+
+The index of the output item that the content part was added to.
+
+part
+object
+
+The content part that is done.
+
+
+Show possible types
+type
+string
+
+The type of the event. Always response.content_part.done.
+
+OBJECT response.content_part.done
+{
+  "type": "response.content_part.done",
+  "item_id": "msg_123",
+  "output_index": 0,
+  "content_index": 0,
+  "part": {
+    "type": "output_text",
+    "text": "In a shimmering forest under a sky full of stars, a lonely unicorn named Lila discovered a hidden pond that glowed with moonlight. Every night, she would leave sparkling, magical flowers by the water's edge, hoping to share her beauty with others. One enchanting evening, she woke to find a group of friendly animals gathered around, eager to be friends and share in her magic.",
+    "annotations": []
+  }
+}
+response.output_text.delta
+Emitted when there is an additional text delta.
+
+content_index
+integer
+
+The index of the content part that the text delta was added to.
+
+delta
+string
+
+The text delta that was added.
+
+item_id
+string
+
+The ID of the output item that the text delta was added to.
+
+output_index
+integer
+
+The index of the output item that the text delta was added to.
+
+type
+string
+
+The type of the event. Always response.output_text.delta.
+
+OBJECT response.output_text.delta
+{
+  "type": "response.output_text.delta",
+  "item_id": "msg_123",
+  "output_index": 0,
+  "content_index": 0,
+  "delta": "In"
+}
+response.output_text.annotation.added
+Emitted when a text annotation is added.
+
+annotation
+object
+
+annotation_index
+integer
+
+The index of the annotation that was added.
+
+content_index
+integer
+
+The index of the content part that the text annotation was added to.
+
+item_id
+string
+
+The ID of the output item that the text annotation was added to.
+
+output_index
+integer
+
+The index of the output item that the text annotation was added to.
+
+type
+string
+
+The type of the event. Always response.output_text.annotation.added.
+
+OBJECT response.output_text.annotation.added
+{
+  "type": "response.output_text.annotation.added",
+  "item_id": "msg_abc123",
+  "output_index": 1,
+  "content_index": 0,
+  "annotation_index": 0,
+  "annotation": {
+    "type": "file_citation",
+    "index": 390,
+    "file_id": "file-4wDz5b167pAf72nx1h9eiN",
+    "filename": "dragons.pdf"
+  }
+}
+response.output_text.done
+Emitted when text content is finalized.
+
+content_index
+integer
+
+The index of the content part that the text content is finalized.
+
+item_id
+string
+
+The ID of the output item that the text content is finalized.
+
+output_index
+integer
+
+The index of the output item that the text content is finalized.
+
+text
+string
+
+The text content that is finalized.
+
+type
+string
+
+The type of the event. Always response.output_text.done.
+
+OBJECT response.output_text.done
+{
+  "type": "response.output_text.done",
+  "item_id": "msg_123",
+  "output_index": 0,
+  "content_index": 0,
+  "text": "In a shimmering forest under a sky full of stars, a lonely unicorn named Lila discovered a hidden pond that glowed with moonlight. Every night, she would leave sparkling, magical flowers by the water's edge, hoping to share her beauty with others. One enchanting evening, she woke to find a group of friendly animals gathered around, eager to be friends and share in her magic."
+}
+response.refusal.delta
+Emitted when there is a partial refusal text.
+
+content_index
+integer
+
+The index of the content part that the refusal text is added to.
+
+delta
+string
+
+The refusal text that is added.
+
+item_id
+string
+
+The ID of the output item that the refusal text is added to.
+
+output_index
+integer
+
+The index of the output item that the refusal text is added to.
+
+type
+string
+
+The type of the event. Always response.refusal.delta.
+
+OBJECT response.refusal.delta
+{
+  "type": "response.refusal.delta",
+  "item_id": "msg_123",
+  "output_index": 0,
+  "content_index": 0,
+  "delta": "refusal text so far"
+}
+response.refusal.done
+Emitted when refusal text is finalized.
+
+content_index
+integer
+
+The index of the content part that the refusal text is finalized.
+
+item_id
+string
+
+The ID of the output item that the refusal text is finalized.
+
+output_index
+integer
+
+The index of the output item that the refusal text is finalized.
+
+refusal
+string
+
+The refusal text that is finalized.
+
+type
+string
+
+The type of the event. Always response.refusal.done.
+
+OBJECT response.refusal.done
+{
+  "type": "response.refusal.done",
+  "item_id": "item-abc",
+  "output_index": 1,
+  "content_index": 2,
+  "refusal": "final refusal text"
+}
+response.function_call_arguments.delta
+Emitted when there is a partial function-call arguments delta.
+
+delta
+string
+
+The function-call arguments delta that is added.
+
+item_id
+string
+
+The ID of the output item that the function-call arguments delta is added to.
+
+output_index
+integer
+
+The index of the output item that the function-call arguments delta is added to.
+
+type
+string
+
+The type of the event. Always response.function_call_arguments.delta.
+
+OBJECT response.function_call_arguments.delta
+{
+  "type": "response.function_call_arguments.delta",
+  "item_id": "item-abc",
+  "output_index": 0,
+  "delta": "{ \"arg\":"
+}
+response.function_call_arguments.done
+Emitted when function-call arguments are finalized.
+
+arguments
+string
+
+The function-call arguments.
+
+item_id
+string
+
+The ID of the item.
+
+output_index
+integer
+
+The index of the output item.
+
+type
+string
+
+OBJECT response.function_call_arguments.done
+{
+  "type": "response.function_call_arguments.done",
+  "item_id": "item-abc",
+  "output_index": 1,
+  "arguments": "{ \"arg\": 123 }"
+}
+response.file_search_call.in_progress
+Emitted when a file search call is initiated.
+
+item_id
+string
+
+The ID of the output item that the file search call is initiated.
+
+output_index
+integer
+
+The index of the output item that the file search call is initiated.
+
+type
+string
+
+The type of the event. Always response.file_search_call.in_progress.
+
+OBJECT response.file_search_call.in_progress
+{
+  "type": "response.file_search_call.in_progress",
+  "output_index": 0,
+  "item_id": "fs_123",
+}
+response.file_search_call.searching
+Emitted when a file search is currently searching.
+
+item_id
+string
+
+The ID of the output item that the file search call is initiated.
+
+output_index
+integer
+
+The index of the output item that the file search call is searching.
+
+type
+string
+
+The type of the event. Always response.file_search_call.searching.
+
+OBJECT response.file_search_call.searching
+{
+  "type": "response.file_search_call.searching",
+  "output_index": 0,
+  "item_id": "fs_123",
+}
+response.file_search_call.completed
+Emitted when a file search call is completed (results found).
+
+item_id
+string
+
+The ID of the output item that the file search call is initiated.
+
+output_index
+integer
+
+The index of the output item that the file search call is initiated.
+
+type
+string
+
+The type of the event. Always response.file_search_call.completed.
+
+OBJECT response.file_search_call.completed
+{
+  "type": "response.file_search_call.completed",
+  "output_index": 0,
+  "item_id": "fs_123",
+}
+response.web_search_call.in_progress
+Emitted when a web search call is initiated.
+
+item_id
+string
+
+Unique ID for the output item associated with the web search call.
+
+output_index
+integer
+
+The index of the output item that the web search call is associated with.
+
+type
+string
+
+The type of the event. Always response.web_search_call.in_progress.
+
+OBJECT response.web_search_call.in_progress
+{
+  "type": "response.web_search_call.in_progress",
+  "output_index": 0,
+  "item_id": "ws_123",
+}
+response.web_search_call.searching
+Emitted when a web search call is executing.
+
+item_id
+string
+
+Unique ID for the output item associated with the web search call.
+
+output_index
+integer
+
+The index of the output item that the web search call is associated with.
+
+type
+string
+
+The type of the event. Always response.web_search_call.searching.
+
+OBJECT response.web_search_call.searching
+{
+  "type": "response.web_search_call.searching",
+  "output_index": 0,
+  "item_id": "ws_123",
+}
+response.web_search_call.completed
+Emitted when a web search call is completed.
+
+item_id
+string
+
+Unique ID for the output item associated with the web search call.
+
+output_index
+integer
+
+The index of the output item that the web search call is associated with.
+
+type
+string
+
+The type of the event. Always response.web_search_call.completed.
+
+OBJECT response.web_search_call.completed
+{
+  "type": "response.web_search_call.completed",
+  "output_index": 0,
+  "item_id": "ws_123",
+}
+error
+Emitted when an error occurs.
+
+code
+string or null
+
+The error code.
+
+message
+string
+
+The error message.
+
+param
+string or null
+
+The error parameter.
+
+type
+string
+
+The type of the event. Always error.
+
+OBJECT error
+{
+  "type": "error",
+  "code": "ERR_SOMETHING",
+  "message": "Something went wrong",
+  "param": null
+}
+Chat Completions
+The Chat Completions API endpoint will generate a model response from a list of messages comprising a conversation.
+
+Related guides:
+
+Quickstart
+Text inputs and outputs
+Image inputs
+Audio inputs and outputs
+Structured Outputs
+Function calling
+Conversation state
+Starting a new project? We recommend trying Responses to take advantage of the latest OpenAI platform features. Compare Chat Completions with Responses.
+
+Create chat completion
+post
+ 
+https://api.openai.com/v1/chat/completions
+Starting a new project? We recommend trying Responses to take advantage of the latest OpenAI platform features. Compare Chat Completions with Responses.
+
+Creates a model response for the given chat conversation. Learn more in the text generation, vision, and audio guides.
+
+Parameter support can differ depending on the model used to generate the response, particularly for newer reasoning models. Parameters that are only supported for reasoning models are noted below. For the current state of unsupported parameters in reasoning models, refer to the reasoning guide.
+
+Request body
+messages
+array
+
+Required
+A list of messages comprising the conversation so far. Depending on the model you use, different message types (modalities) are supported, like text, images, and audio.
+
+
+Show possible types
+model
+string
+
+Required
+Model ID used to generate the response, like gpt-4o or o1. OpenAI offers a wide range of models with different capabilities, performance characteristics, and price points. Refer to the model guide to browse and compare available models.
+
+audio
+object or null
+
+Optional
+Parameters for audio output. Required when audio output is requested with modalities: ["audio"]. Learn more.
+
+
+Show properties
+frequency_penalty
+number or null
+
+Optional
+Defaults to 0
+Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim.
+
+function_call
+Deprecated
+string or object
+
+Optional
+Deprecated in favor of tool_choice.
+
+Controls which (if any) function is called by the model.
+
+none means the model will not call a function and instead generates a message.
+
+auto means the model can pick between generating a message or calling a function.
+
+Specifying a particular function via {"name": "my_function"} forces the model to call that function.
+
+none is the default when no functions are present. auto is the default if functions are present.
+
+
+Show possible types
+functions
+Deprecated
+array
+
+Optional
+Deprecated in favor of tools.
+
+A list of functions the model may generate JSON inputs for.
+
+
+Show properties
+logit_bias
+map
+
+Optional
+Defaults to null
+Modify the likelihood of specified tokens appearing in the completion.
+
+Accepts a JSON object that maps tokens (specified by their token ID in the tokenizer) to an associated bias value from -100 to 100. Mathematically, the bias is added to the logits generated by the model prior to sampling. The exact effect will vary per model, but values between -1 and 1 should decrease or increase likelihood of selection; values like -100 or 100 should result in a ban or exclusive selection of the relevant token.
+
+logprobs
+boolean or null
+
+Optional
+Defaults to false
+Whether to return log probabilities of the output tokens or not. If true, returns the log probabilities of each output token returned in the content of message.
+
+max_completion_tokens
+integer or null
+
+Optional
+An upper bound for the number of tokens that can be generated for a completion, including visible output tokens and reasoning tokens.
+
+max_tokens
+Deprecated
+integer or null
+
+Optional
+The maximum number of tokens that can be generated in the chat completion. This value can be used to control costs for text generated via API.
+
+This value is now deprecated in favor of max_completion_tokens, and is not compatible with o1 series models.
+
+metadata
+map
+
+Optional
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+modalities
+array or null
+
+Optional
+Output types that you would like the model to generate. Most models are capable of generating text, which is the default:
+
+["text"]
+
+The gpt-4o-audio-preview model can also be used to generate audio. To request that this model generate both text and audio responses, you can use:
+
+["text", "audio"]
+
+n
+integer or null
+
+Optional
+Defaults to 1
+How many chat completion choices to generate for each input message. Note that you will be charged based on the number of generated tokens across all of the choices. Keep n as 1 to minimize costs.
+
+parallel_tool_calls
+boolean
+
+Optional
+Defaults to true
+Whether to enable parallel function calling during tool use.
+
+prediction
+object
+
+Optional
+Configuration for a Predicted Output, which can greatly improve response times when large parts of the model response are known ahead of time. This is most common when you are regenerating a file with only minor changes to most of the content.
+
+
+Show possible types
+presence_penalty
+number or null
+
+Optional
+Defaults to 0
+Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.
+
+reasoning_effort
+string or null
+
+Optional
+Defaults to medium
+o-series models only
+
+Constrains effort on reasoning for reasoning models. Currently supported values are low, medium, and high. Reducing reasoning effort can result in faster responses and fewer tokens used on reasoning in a response.
+
+response_format
+object
+
+Optional
+An object specifying the format that the model must output.
+
+Setting to { "type": "json_schema", "json_schema": {...} } enables Structured Outputs which ensures the model will match your supplied JSON schema. Learn more in the Structured Outputs guide.
+
+Setting to { "type": "json_object" } enables the older JSON mode, which ensures the message the model generates is valid JSON. Using json_schema is preferred for models that support it.
+
+
+Show possible types
+seed
+integer or null
+
+Optional
+This feature is in Beta. If specified, our system will make a best effort to sample deterministically, such that repeated requests with the same seed and parameters should return the same result. Determinism is not guaranteed, and you should refer to the system_fingerprint response parameter to monitor changes in the backend.
+
+service_tier
+string or null
+
+Optional
+Defaults to auto
+Specifies the latency tier to use for processing the request. This parameter is relevant for customers subscribed to the scale tier service:
+
+If set to 'auto', and the Project is Scale tier enabled, the system will utilize scale tier credits until they are exhausted.
+If set to 'auto', and the Project is not Scale tier enabled, the request will be processed using the default service tier with a lower uptime SLA and no latency guarentee.
+If set to 'default', the request will be processed using the default service tier with a lower uptime SLA and no latency guarentee.
+When not set, the default behavior is 'auto'.
+When this parameter is set, the response body will include the service_tier utilized.
+
+stop
+string / array / null
+
+Optional
+Defaults to null
+Up to 4 sequences where the API will stop generating further tokens. The returned text will not contain the stop sequence.
+
+store
+boolean or null
+
+Optional
+Defaults to false
+Whether or not to store the output of this chat completion request for use in our model distillation or evals products.
+
+stream
+boolean or null
+
+Optional
+Defaults to false
+If set to true, the model response data will be streamed to the client as it is generated using server-sent events. See the Streaming section below for more information, along with the streaming responses guide for more information on how to handle the streaming events.
+
+stream_options
+object or null
+
+Optional
+Defaults to null
+Options for streaming response. Only set this when you set stream: true.
+
+
+Show properties
+temperature
+number or null
+
+Optional
+Defaults to 1
+What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. We generally recommend altering this or top_p but not both.
+
+tool_choice
+string or object
+
+Optional
+Controls which (if any) tool is called by the model. none means the model will not call any tool and instead generates a message. auto means the model can pick between generating a message or calling one or more tools. required means the model must call one or more tools. Specifying a particular tool via {"type": "function", "function": {"name": "my_function"}} forces the model to call that tool.
+
+none is the default when no tools are present. auto is the default if tools are present.
+
+
+Show possible types
+tools
+array
+
+Optional
+A list of tools the model may call. Currently, only functions are supported as a tool. Use this to provide a list of functions the model may generate JSON inputs for. A max of 128 functions are supported.
+
+
+Show properties
+top_logprobs
+integer or null
+
+Optional
+An integer between 0 and 20 specifying the number of most likely tokens to return at each token position, each with an associated log probability. logprobs must be set to true if this parameter is used.
+
+top_p
+number or null
+
+Optional
+Defaults to 1
+An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered.
+
+We generally recommend altering this or temperature but not both.
+
+user
+string
+
+Optional
+A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse. Learn more.
+
+web_search_options
+object
+
+Optional
+This tool searches the web for relevant results to use in a response. Learn more about the web search tool.
+
+
+Show properties
+Returns
+Returns a chat completion object, or a streamed sequence of chat completion chunk objects if the request is streamed.
+
+
+Default
+
+Image input
+
+Streaming
+
+Functions
+
+Logprobs
+Example request
+curl https://api.openai.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [
+      {
+        "role": "developer",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Hello!"
+      }
+    ]
+  }'
+Response
+{
+  "id": "chatcmpl-B9MBs8CjcvOU2jLn4n570S5qMJKcT",
+  "object": "chat.completion",
+  "created": 1741569952,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Hello! How can I assist you today?",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 19,
+    "completion_tokens": 10,
+    "total_tokens": 29,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default"
+}
+Get chat completion
+get
+ 
+https://api.openai.com/v1/chat/completions/{completion_id}
+Get a stored chat completion. Only Chat Completions that have been created with the store parameter set to true will be returned.
+
+Path parameters
+completion_id
+string
+
+Required
+The ID of the chat completion to retrieve.
+
+Returns
+The ChatCompletion object matching the specified ID.
+
+Example request
+curl https://api.openai.com/v1/chat/completions/chatcmpl-abc123 \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json"
+Response
+{
+  "object": "chat.completion",
+  "id": "chatcmpl-abc123",
+  "model": "gpt-4o-2024-08-06",
+  "created": 1738960610,
+  "request_id": "req_ded8ab984ec4bf840f37566c1011c417",
+  "tool_choice": null,
+  "usage": {
+    "total_tokens": 31,
+    "completion_tokens": 18,
+    "prompt_tokens": 13
+  },
+  "seed": 4944116822809979520,
+  "top_p": 1.0,
+  "temperature": 1.0,
+  "presence_penalty": 0.0,
+  "frequency_penalty": 0.0,
+  "system_fingerprint": "fp_50cad350e4",
+  "input_user": null,
+  "service_tier": "default",
+  "tools": null,
+  "metadata": {},
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "content": "Mind of circuits hum,  \nLearning patterns in silence—  \nFuture's quiet spark.",
+        "role": "assistant",
+        "tool_calls": null,
+        "function_call": null
+      },
+      "finish_reason": "stop",
+      "logprobs": null
+    }
+  ],
+  "response_format": null
+}
+Get chat messages
+get
+ 
+https://api.openai.com/v1/chat/completions/{completion_id}/messages
+Get the messages in a stored chat completion. Only Chat Completions that have been created with the store parameter set to true will be returned.
+
+Path parameters
+completion_id
+string
+
+Required
+The ID of the chat completion to retrieve messages from.
+
+Query parameters
+after
+string
+
+Optional
+Identifier for the last message from the previous pagination request.
+
+limit
+integer
+
+Optional
+Defaults to 20
+Number of messages to retrieve.
+
+order
+string
+
+Optional
+Defaults to asc
+Sort order for messages by timestamp. Use asc for ascending order or desc for descending order. Defaults to asc.
+
+Returns
+A list of messages for the specified chat completion.
+
+Example request
+curl https://api.openai.com/v1/chat/completions/chat_abc123/messages \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json"
+Response
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2-0",
+      "role": "user",
+      "content": "write a haiku about ai",
+      "name": null,
+      "content_parts": null
+    }
+  ],
+  "first_id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2-0",
+  "last_id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2-0",
+  "has_more": false
+}
+List Chat Completions
+get
+ 
+https://api.openai.com/v1/chat/completions
+List stored Chat Completions. Only Chat Completions that have been stored with the store parameter set to true will be returned.
+
+Query parameters
+after
+string
+
+Optional
+Identifier for the last chat completion from the previous pagination request.
+
+limit
+integer
+
+Optional
+Defaults to 20
+Number of Chat Completions to retrieve.
+
+metadata
+map
+
+Optional
+A list of metadata keys to filter the Chat Completions by. Example:
+
+metadata[key1]=value1&metadata[key2]=value2
+
+model
+string
+
+Optional
+The model used to generate the Chat Completions.
+
+order
+string
+
+Optional
+Defaults to asc
+Sort order for Chat Completions by timestamp. Use asc for ascending order or desc for descending order. Defaults to asc.
+
+Returns
+A list of Chat Completions matching the specified filters.
+
+Example request
+curl https://api.openai.com/v1/chat/completions \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json"
+Response
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "chat.completion",
+      "id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2",
+      "model": "gpt-4o-2024-08-06",
+      "created": 1738960610,
+      "request_id": "req_ded8ab984ec4bf840f37566c1011c417",
+      "tool_choice": null,
+      "usage": {
+        "total_tokens": 31,
+        "completion_tokens": 18,
+        "prompt_tokens": 13
+      },
+      "seed": 4944116822809979520,
+      "top_p": 1.0,
+      "temperature": 1.0,
+      "presence_penalty": 0.0,
+      "frequency_penalty": 0.0,
+      "system_fingerprint": "fp_50cad350e4",
+      "input_user": null,
+      "service_tier": "default",
+      "tools": null,
+      "metadata": {},
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "content": "Mind of circuits hum,  \nLearning patterns in silence—  \nFuture's quiet spark.",
+            "role": "assistant",
+            "tool_calls": null,
+            "function_call": null
+          },
+          "finish_reason": "stop",
+          "logprobs": null
+        }
+      ],
+      "response_format": null
+    }
+  ],
+  "first_id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2",
+  "last_id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2",
+  "has_more": false
+}
+Update chat completion
+post
+ 
+https://api.openai.com/v1/chat/completions/{completion_id}
+Modify a stored chat completion. Only Chat Completions that have been created with the store parameter set to true can be modified. Currently, the only supported modification is to update the metadata field.
+
+Path parameters
+completion_id
+string
+
+Required
+The ID of the chat completion to update.
+
+Request body
+metadata
+map
+
+Required
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+Returns
+The ChatCompletion object matching the specified ID.
+
+Example request
+curl -X POST https://api.openai.com/v1/chat/completions/chat_abc123 \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"metadata": {"foo": "bar"}}'
+Response
+{
+  "object": "chat.completion",
+  "id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2",
+  "model": "gpt-4o-2024-08-06",
+  "created": 1738960610,
+  "request_id": "req_ded8ab984ec4bf840f37566c1011c417",
+  "tool_choice": null,
+  "usage": {
+    "total_tokens": 31,
+    "completion_tokens": 18,
+    "prompt_tokens": 13
+  },
+  "seed": 4944116822809979520,
+  "top_p": 1.0,
+  "temperature": 1.0,
+  "presence_penalty": 0.0,
+  "frequency_penalty": 0.0,
+  "system_fingerprint": "fp_50cad350e4",
+  "input_user": null,
+  "service_tier": "default",
+  "tools": null,
+  "metadata": {
+    "foo": "bar"
+  },
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "content": "Mind of circuits hum,  \nLearning patterns in silence—  \nFuture's quiet spark.",
+        "role": "assistant",
+        "tool_calls": null,
+        "function_call": null
+      },
+      "finish_reason": "stop",
+      "logprobs": null
+    }
+  ],
+  "response_format": null
+}
+Delete chat completion
+delete
+ 
+https://api.openai.com/v1/chat/completions/{completion_id}
+Delete a stored chat completion. Only Chat Completions that have been created with the store parameter set to true can be deleted.
+
+Path parameters
+completion_id
+string
+
+Required
+The ID of the chat completion to delete.
+
+Returns
+A deletion confirmation object.
+
+Example request
+curl -X DELETE https://api.openai.com/v1/chat/completions/chat_abc123 \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json"
+Response
+{
+  "object": "chat.completion.deleted",
+  "id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2",
+  "deleted": true
+}
+The chat completion object
+Represents a chat completion response returned by model, based on the provided input.
+
+choices
+array
+
+A list of chat completion choices. Can be more than one if n is greater than 1.
+
+
+Show properties
+created
+integer
+
+The Unix timestamp (in seconds) of when the chat completion was created.
+
+id
+string
+
+A unique identifier for the chat completion.
+
+model
+string
+
+The model used for the chat completion.
+
+object
+string
+
+The object type, which is always chat.completion.
+
+service_tier
+string or null
+
+The service tier used for processing the request.
+
+system_fingerprint
+string
+
+This fingerprint represents the backend configuration that the model runs with.
+
+Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
+
+usage
+object
+
+Usage statistics for the completion request.
+
+
+Show properties
+OBJECT The chat completion object
+{
+  "id": "chatcmpl-B9MHDbslfkBeAs8l4bebGdFOJ6PeG",
+  "object": "chat.completion",
+  "created": 1741570283,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "The image shows a wooden boardwalk path running through a lush green field or meadow. The sky is bright blue with some scattered clouds, giving the scene a serene and peaceful atmosphere. Trees and shrubs are visible in the background.",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1117,
+    "completion_tokens": 46,
+    "total_tokens": 1163,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_fc9f1d7035"
+}
+The chat completion list object
+An object representing a list of Chat Completions.
+
+data
+array
+
+An array of chat completion objects.
+
+
+Show properties
+first_id
+string
+
+The identifier of the first chat completion in the data array.
+
+has_more
+boolean
+
+Indicates whether there are more Chat Completions available.
+
+last_id
+string
+
+The identifier of the last chat completion in the data array.
+
+object
+string
+
+The type of this object. It is always set to "list".
+
+OBJECT The chat completion list object
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "chat.completion",
+      "id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2",
+      "model": "gpt-4o-2024-08-06",
+      "created": 1738960610,
+      "request_id": "req_ded8ab984ec4bf840f37566c1011c417",
+      "tool_choice": null,
+      "usage": {
+        "total_tokens": 31,
+        "completion_tokens": 18,
+        "prompt_tokens": 13
+      },
+      "seed": 4944116822809979520,
+      "top_p": 1.0,
+      "temperature": 1.0,
+      "presence_penalty": 0.0,
+      "frequency_penalty": 0.0,
+      "system_fingerprint": "fp_50cad350e4",
+      "input_user": null,
+      "service_tier": "default",
+      "tools": null,
+      "metadata": {},
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "content": "Mind of circuits hum,  \nLearning patterns in silence—  \nFuture's quiet spark.",
+            "role": "assistant",
+            "tool_calls": null,
+            "function_call": null
+          },
+          "finish_reason": "stop",
+          "logprobs": null
+        }
+      ],
+      "response_format": null
+    }
+  ],
+  "first_id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2",
+  "last_id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2",
+  "has_more": false
+}
+The chat completion message list object
+An object representing a list of chat completion messages.
+
+data
+array
+
+An array of chat completion message objects.
+
+
+Show properties
+first_id
+string
+
+The identifier of the first chat message in the data array.
+
+has_more
+boolean
+
+Indicates whether there are more chat messages available.
+
+last_id
+string
+
+The identifier of the last chat message in the data array.
+
+object
+string
+
+The type of this object. It is always set to "list".
+
+OBJECT The chat completion message list object
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2-0",
+      "role": "user",
+      "content": "write a haiku about ai",
+      "name": null,
+      "content_parts": null
+    }
+  ],
+  "first_id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2-0",
+  "last_id": "chatcmpl-AyPNinnUqUDYo9SAdA52NobMflmj2-0",
+  "has_more": false
+}
+Streaming
+Stream Chat Completions in real time. Receive chunks of completions returned from the model using server-sent events. Learn more.
+
+The chat completion chunk object
+Represents a streamed chunk of a chat completion response returned by the model, based on the provided input. Learn more.
+
+choices
+array
+
+A list of chat completion choices. Can contain more than one elements if n is greater than 1. Can also be empty for the last chunk if you set stream_options: {"include_usage": true}.
+
+
+Show properties
+created
+integer
+
+The Unix timestamp (in seconds) of when the chat completion was created. Each chunk has the same timestamp.
+
+id
+string
+
+A unique identifier for the chat completion. Each chunk has the same ID.
+
+model
+string
+
+The model to generate the completion.
+
+object
+string
+
+The object type, which is always chat.completion.chunk.
+
+service_tier
+string or null
+
+The service tier used for processing the request.
+
+system_fingerprint
+string
+
+This fingerprint represents the backend configuration that the model runs with. Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
+
+usage
+object or null
+
+Usage statistics for the completion request.
+
+
+Show properties
+OBJECT The chat completion chunk object
+{"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"gpt-4o-mini", "system_fingerprint": "fp_44709d6fcb", "choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
+
+{"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"gpt-4o-mini", "system_fingerprint": "fp_44709d6fcb", "choices":[{"index":0,"delta":{"content":"Hello"},"logprobs":null,"finish_reason":null}]}
+
+....
+
+{"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"gpt-4o-mini", "system_fingerprint": "fp_44709d6fcb", "choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+Realtime
+Beta
+Communicate with a GPT-4o class model in real time using WebRTC or WebSockets. Supports text and audio inputs and ouputs, along with audio transcriptions. Learn more about the Realtime API.
+
+Session tokens
+REST API endpoint to generate ephemeral session tokens for use in client-side applications.
+
+Create session
+post
+ 
+https://api.openai.com/v1/realtime/sessions
+Create an ephemeral API token for use in client-side applications with the Realtime API. Can be configured with the same session parameters as the session.update client event.
+
+It responds with a session object, plus a client_secret key which contains a usable ephemeral API token that can be used to authenticate browser clients for the Realtime API.
+
+Request body
+input_audio_format
+string
+
+Optional
+Defaults to pcm16
+The format of input audio. Options are pcm16, g711_ulaw, or g711_alaw. For pcm16, input audio must be 16-bit PCM at a 24kHz sample rate, single channel (mono), and little-endian byte order.
+
+input_audio_noise_reduction
+object
+
+Optional
+Defaults to null
+Configuration for input audio noise reduction. This can be set to null to turn off. Noise reduction filters audio added to the input audio buffer before it is sent to VAD and the model. Filtering the audio can improve VAD and turn detection accuracy (reducing false positives) and model performance by improving perception of the input audio.
+
+
+Show properties
+input_audio_transcription
+object
+
+Optional
+Configuration for input audio transcription, defaults to off and can be set to null to turn off once on. Input audio transcription is not native to the model, since the model consumes audio directly. Transcription runs asynchronously through the /audio/transcriptions endpoint and should be treated as guidance of input audio content rather than precisely what the model heard. The client can optionally set the language and prompt for transcription, these offer additional guidance to the transcription service.
+
+
+Show properties
+instructions
+string
+
+Optional
+The default system instructions (i.e. system message) prepended to model calls. This field allows the client to guide the model on desired responses. The model can be instructed on response content and format, (e.g. "be extremely succinct", "act friendly", "here are examples of good responses") and on audio behavior (e.g. "talk quickly", "inject emotion into your voice", "laugh frequently"). The instructions are not guaranteed to be followed by the model, but they provide guidance to the model on the desired behavior.
+
+Note that the server sets default instructions which will be used if this field is not set and are visible in the session.created event at the start of the session.
+
+max_response_output_tokens
+integer or "inf"
+
+Optional
+Maximum number of output tokens for a single assistant response, inclusive of tool calls. Provide an integer between 1 and 4096 to limit output tokens, or inf for the maximum available tokens for a given model. Defaults to inf.
+
+modalities
+Optional
+The set of modalities the model can respond with. To disable audio, set this to ["text"].
+
+model
+string
+
+Optional
+The Realtime model used for this session.
+
+output_audio_format
+string
+
+Optional
+Defaults to pcm16
+The format of output audio. Options are pcm16, g711_ulaw, or g711_alaw. For pcm16, output audio is sampled at a rate of 24kHz.
+
+temperature
+number
+
+Optional
+Defaults to 0.8
+Sampling temperature for the model, limited to [0.6, 1.2]. For audio models a temperature of 0.8 is highly recommended for best performance.
+
+tool_choice
+string
+
+Optional
+Defaults to auto
+How the model chooses tools. Options are auto, none, required, or specify a function.
+
+tools
+array
+
+Optional
+Tools (functions) available to the model.
+
+
+Show properties
+turn_detection
+object
+
+Optional
+Configuration for turn detection, ether Server VAD or Semantic VAD. This can be set to null to turn off, in which case the client must manually trigger model response. Server VAD means that the model will detect the start and end of speech based on audio volume and respond at the end of user speech. Semantic VAD is more advanced and uses a turn detection model (in conjuction with VAD) to semantically estimate whether the user has finished speaking, then dynamically sets a timeout based on this probability. For example, if user audio trails off with "uhhm", the model will score a low probability of turn end and wait longer for the user to continue speaking. This can be useful for more natural conversations, but may have a higher latency.
+
+
+Show properties
+voice
+string
+
+Optional
+The voice the model uses to respond. Voice cannot be changed during the session once the model has responded with audio at least once. Current voice options are alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, and verse.
+
+Returns
+The created Realtime session object, plus an ephemeral key
+
+Example request
+curl -X POST https://api.openai.com/v1/realtime/sessions \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o-realtime-preview",
+    "modalities": ["audio", "text"],
+    "instructions": "You are a friendly assistant."
+  }'
+Response
+{
+  "id": "sess_001",
+  "object": "realtime.session",
+  "model": "gpt-4o-realtime-preview",
+  "modalities": ["audio", "text"],
+  "instructions": "You are a friendly assistant.",
+  "voice": "alloy",
+  "input_audio_format": "pcm16",
+  "output_audio_format": "pcm16",
+  "input_audio_transcription": {
+      "model": "whisper-1"
+  },
+  "turn_detection": null,
+  "tools": [],
+  "tool_choice": "none",
+  "temperature": 0.7,
+  "max_response_output_tokens": 200,
+  "client_secret": {
+    "value": "ek_abc123", 
+    "expires_at": 1234567890
+  }
+}
+Create transcription session
+post
+ 
+https://api.openai.com/v1/realtime/transcription_sessions
+Create an ephemeral API token for use in client-side applications with the Realtime API specifically for realtime transcriptions. Can be configured with the same session parameters as the transcription_session.update client event.
+
+It responds with a session object, plus a client_secret key which contains a usable ephemeral API token that can be used to authenticate browser clients for the Realtime API.
+
+Request body
+include
+array
+
+Optional
+The set of items to include in the transcription. Current available items are:
+
+null.
+
+input_audio_format
+string
+
+Optional
+Defaults to pcm16
+The format of input audio. Options are pcm16, g711_ulaw, or g711_alaw. For pcm16, input audio must be 16-bit PCM at a 24kHz sample rate, single channel (mono), and little-endian byte order.
+
+input_audio_noise_reduction
+object
+
+Optional
+Defaults to null
+Configuration for input audio noise reduction. This can be set to null to turn off. Noise reduction filters audio added to the input audio buffer before it is sent to VAD and the model. Filtering the audio can improve VAD and turn detection accuracy (reducing false positives) and model performance by improving perception of the input audio.
+
+
+Show properties
+input_audio_transcription
+object
+
+Optional
+Configuration for input audio transcription. The client can optionally set the language and prompt for transcription, these offer additional guidance to the transcription service.
+
+
+Show properties
+modalities
+Optional
+The set of modalities the model can respond with. To disable audio, set this to ["text"].
+
+turn_detection
+object
+
+Optional
+Configuration for turn detection, ether Server VAD or Semantic VAD. This can be set to null to turn off, in which case the client must manually trigger model response. Server VAD means that the model will detect the start and end of speech based on audio volume and respond at the end of user speech. Semantic VAD is more advanced and uses a turn detection model (in conjuction with VAD) to semantically estimate whether the user has finished speaking, then dynamically sets a timeout based on this probability. For example, if user audio trails off with "uhhm", the model will score a low probability of turn end and wait longer for the user to continue speaking. This can be useful for more natural conversations, but may have a higher latency.
+
+
+Show properties
+Returns
+The created Realtime transcription session object, plus an ephemeral key
+
+Example request
+curl -X POST https://api.openai.com/v1/realtime/transcription_sessions \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+Response
+{
+  "id": "sess_BBwZc7cFV3XizEyKGDCGL",
+  "object": "realtime.transcription_session",
+  "modalities": ["audio", "text"],
+  "turn_detection": {
+    "type": "server_vad",
+    "threshold": 0.5,
+    "prefix_padding_ms": 300,
+    "silence_duration_ms": 200
+  },
+  "input_audio_format": "pcm16",
+  "input_audio_transcription": {
+    "model": "gpt-4o-transcribe",
+    "language": null,
+    "prompt": ""
+  },
+  "client_secret": null
+}
+The session object
+A new Realtime session configuration, with an ephermeral key. Default TTL for keys is one minute.
+
+client_secret
+object
+
+Ephemeral key returned by the API.
+
+
+Show properties
+input_audio_format
+string
+
+The format of input audio. Options are pcm16, g711_ulaw, or g711_alaw.
+
+input_audio_transcription
+object
+
+Configuration for input audio transcription, defaults to off and can be set to null to turn off once on. Input audio transcription is not native to the model, since the model consumes audio directly. Transcription runs asynchronously through Whisper and should be treated as rough guidance rather than the representation understood by the model.
+
+
+Show properties
+instructions
+string
+
+The default system instructions (i.e. system message) prepended to model calls. This field allows the client to guide the model on desired responses. The model can be instructed on response content and format, (e.g. "be extremely succinct", "act friendly", "here are examples of good responses") and on audio behavior (e.g. "talk quickly", "inject emotion into your voice", "laugh frequently"). The instructions are not guaranteed to be followed by the model, but they provide guidance to the model on the desired behavior.
+
+Note that the server sets default instructions which will be used if this field is not set and are visible in the session.created event at the start of the session.
+
+max_response_output_tokens
+integer or "inf"
+
+Maximum number of output tokens for a single assistant response, inclusive of tool calls. Provide an integer between 1 and 4096 to limit output tokens, or inf for the maximum available tokens for a given model. Defaults to inf.
+
+modalities
+The set of modalities the model can respond with. To disable audio, set this to ["text"].
+
+output_audio_format
+string
+
+The format of output audio. Options are pcm16, g711_ulaw, or g711_alaw.
+
+temperature
+number
+
+Sampling temperature for the model, limited to [0.6, 1.2]. Defaults to 0.8.
+
+tool_choice
+string
+
+How the model chooses tools. Options are auto, none, required, or specify a function.
+
+tools
+array
+
+Tools (functions) available to the model.
+
+
+Show properties
+turn_detection
+object
+
+Configuration for turn detection. Can be set to null to turn off. Server VAD means that the model will detect the start and end of speech based on audio volume and respond at the end of user speech.
+
+
+Show properties
+voice
+string
+
+The voice the model uses to respond. Voice cannot be changed during the session once the model has responded with audio at least once. Current voice options are alloy, ash, ballad, coral, echo sage, shimmer and verse.
+
+OBJECT The session object
+{
+  "id": "sess_001",
+  "object": "realtime.session",
+  "model": "gpt-4o-realtime-preview",
+  "modalities": ["audio", "text"],
+  "instructions": "You are a friendly assistant.",
+  "voice": "alloy",
+  "input_audio_format": "pcm16",
+  "output_audio_format": "pcm16",
+  "input_audio_transcription": {
+      "model": "whisper-1"
+  },
+  "turn_detection": null,
+  "tools": [],
+  "tool_choice": "none",
+  "temperature": 0.7,
+  "max_response_output_tokens": 200,
+  "client_secret": {
+    "value": "ek_abc123", 
+    "expires_at": 1234567890
+  }
+}
+The transcription session object
+A new Realtime transcription session configuration.
+
+When a session is created on the server via REST API, the session object also contains an ephemeral key. Default TTL for keys is one minute. This property is not present when a session is updated via the WebSocket API.
+
+client_secret
+object
+
+Ephemeral key returned by the API. Only present when the session is created on the server via REST API.
+
+
+Show properties
+input_audio_format
+string
+
+The format of input audio. Options are pcm16, g711_ulaw, or g711_alaw.
+
+input_audio_transcription
+object
+
+Configuration of the transcription model.
+
+
+Show properties
+modalities
+The set of modalities the model can respond with. To disable audio, set this to ["text"].
+
+turn_detection
+object
+
+Configuration for turn detection. Can be set to null to turn off. Server VAD means that the model will detect the start and end of speech based on audio volume and respond at the end of user speech.
+
+
+Show properties
+OBJECT The transcription session object
+{
+  "id": "sess_BBwZc7cFV3XizEyKGDCGL",
+  "object": "realtime.transcription_session",
+  "expires_at": 1742188264,
+  "modalities": ["audio", "text"],
+  "turn_detection": {
+    "type": "server_vad",
+    "threshold": 0.5,
+    "prefix_padding_ms": 300,
+    "silence_duration_ms": 200
+  },
+  "input_audio_format": "pcm16",
+  "input_audio_transcription": {
+    "model": "gpt-4o-transcribe",
+    "language": null,
+    "prompt": ""
+  },
+  "client_secret": null
+}
+Client events
+These are events that the OpenAI Realtime WebSocket server will accept from the client.
+
+session.update
+Send this event to update the session’s default configuration. The client may send this event at any time to update any field, except for voice. However, note that once a session has been initialized with a particular model, it can’t be changed to another model using session.update.
+
+When the server receives a session.update, it will respond with a session.updated event showing the full, effective configuration. Only the fields that are present are updated. To clear a field like instructions, pass an empty string.
+
+event_id
+string
+
+Optional client-generated ID used to identify this event.
+
+session
+object
+
+Realtime session object configuration.
+
+
+Show properties
+type
+string
+
+The event type, must be session.update.
+
+OBJECT session.update
+{
+    "event_id": "event_123",
+    "type": "session.update",
+    "session": {
+        "modalities": ["text", "audio"],
+        "instructions": "You are a helpful assistant.",
+        "voice": "sage",
+        "input_audio_format": "pcm16",
+        "output_audio_format": "pcm16",
+        "input_audio_transcription": {
+            "model": "whisper-1"
+        },
+        "turn_detection": {
+            "type": "server_vad",
+            "threshold": 0.5,
+            "prefix_padding_ms": 300,
+            "silence_duration_ms": 500,
+            "create_response": true
+        },
+        "tools": [
+            {
+                "type": "function",
+                "name": "get_weather",
+                "description": "Get the current weather...",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": { "type": "string" }
+                    },
+                    "required": ["location"]
+                }
+            }
+        ],
+        "tool_choice": "auto",
+        "temperature": 0.8,
+        "max_response_output_tokens": "inf"
+    }
+}
+input_audio_buffer.append
+Send this event to append audio bytes to the input audio buffer. The audio buffer is temporary storage you can write to and later commit. In Server VAD mode, the audio buffer is used to detect speech and the server will decide when to commit. When Server VAD is disabled, you must commit the audio buffer manually.
+
+The client may choose how much audio to place in each event up to a maximum of 15 MiB, for example streaming smaller chunks from the client may allow the VAD to be more responsive. Unlike made other client events, the server will not send a confirmation response to this event.
+
+audio
+string
+
+Base64-encoded audio bytes. This must be in the format specified by the input_audio_format field in the session configuration.
+
+event_id
+string
+
+Optional client-generated ID used to identify this event.
+
+type
+string
+
+The event type, must be input_audio_buffer.append.
+
+OBJECT input_audio_buffer.append
+{
+    "event_id": "event_456",
+    "type": "input_audio_buffer.append",
+    "audio": "Base64EncodedAudioData"
+}
+input_audio_buffer.commit
+Send this event to commit the user input audio buffer, which will create a new user message item in the conversation. This event will produce an error if the input audio buffer is empty. When in Server VAD mode, the client does not need to send this event, the server will commit the audio buffer automatically.
+
+Committing the input audio buffer will trigger input audio transcription (if enabled in session configuration), but it will not create a response from the model. The server will respond with an input_audio_buffer.committed event.
+
+event_id
+string
+
+Optional client-generated ID used to identify this event.
+
+type
+string
+
+The event type, must be input_audio_buffer.commit.
+
+OBJECT input_audio_buffer.commit
+{
+    "event_id": "event_789",
+    "type": "input_audio_buffer.commit"
+}
+input_audio_buffer.clear
+Send this event to clear the audio bytes in the buffer. The server will respond with an input_audio_buffer.cleared event.
+
+event_id
+string
+
+Optional client-generated ID used to identify this event.
+
+type
+string
+
+The event type, must be input_audio_buffer.clear.
+
+OBJECT input_audio_buffer.clear
+{
+    "event_id": "event_012",
+    "type": "input_audio_buffer.clear"
+}
+conversation.item.create
+Add a new Item to the Conversation's context, including messages, function calls, and function call responses. This event can be used both to populate a "history" of the conversation and to add new items mid-stream, but has the current limitation that it cannot populate assistant audio messages.
+
+If successful, the server will respond with a conversation.item.created event, otherwise an error event will be sent.
+
+event_id
+string
+
+Optional client-generated ID used to identify this event.
+
+item
+object
+
+The item to add to the conversation.
+
+
+Show properties
+previous_item_id
+string
+
+The ID of the preceding item after which the new item will be inserted. If not set, the new item will be appended to the end of the conversation. If set to root, the new item will be added to the beginning of the conversation. If set to an existing ID, it allows an item to be inserted mid-conversation. If the ID cannot be found, an error will be returned and the item will not be added.
+
+type
+string
+
+The event type, must be conversation.item.create.
+
+OBJECT conversation.item.create
+{
+    "event_id": "event_345",
+    "type": "conversation.item.create",
+    "previous_item_id": null,
+    "item": {
+        "id": "msg_001",
+        "type": "message",
+        "role": "user",
+        "content": [
+            {
+                "type": "input_text",
+                "text": "Hello, how are you?"
+            }
+        ]
+    }
+}
+conversation.item.truncate
+Send this event to truncate a previous assistant message’s audio. The server will produce audio faster than realtime, so this event is useful when the user interrupts to truncate audio that has already been sent to the client but not yet played. This will synchronize the server's understanding of the audio with the client's playback.
+
+Truncating audio will delete the server-side text transcript to ensure there is not text in the context that hasn't been heard by the user.
+
+If successful, the server will respond with a conversation.item.truncated event.
+
+audio_end_ms
+integer
+
+Inclusive duration up to which audio is truncated, in milliseconds. If the audio_end_ms is greater than the actual audio duration, the server will respond with an error.
+
+content_index
+integer
+
+The index of the content part to truncate. Set this to 0.
+
+event_id
+string
+
+Optional client-generated ID used to identify this event.
+
+item_id
+string
+
+The ID of the assistant message item to truncate. Only assistant message items can be truncated.
+
+type
+string
+
+The event type, must be conversation.item.truncate.
+
+OBJECT conversation.item.truncate
+{
+    "event_id": "event_678",
+    "type": "conversation.item.truncate",
+    "item_id": "msg_002",
+    "content_index": 0,
+    "audio_end_ms": 1500
+}
+conversation.item.delete
+Send this event when you want to remove any item from the conversation history. The server will respond with a conversation.item.deleted event, unless the item does not exist in the conversation history, in which case the server will respond with an error.
+
+event_id
+string
+
+Optional client-generated ID used to identify this event.
+
+item_id
+string
+
+The ID of the item to delete.
+
+type
+string
+
+The event type, must be conversation.item.delete.
+
+OBJECT conversation.item.delete
+{
+    "event_id": "event_901",
+    "type": "conversation.item.delete",
+    "item_id": "msg_003"
+}
+response.create
+This event instructs the server to create a Response, which means triggering model inference. When in Server VAD mode, the server will create Responses automatically.
+
+A Response will include at least one Item, and may have two, in which case the second will be a function call. These Items will be appended to the conversation history.
+
+The server will respond with a response.created event, events for Items and content created, and finally a response.done event to indicate the Response is complete.
+
+The response.create event includes inference configuration like instructions, and temperature. These fields will override the Session's configuration for this Response only.
+
+event_id
+string
+
+Optional client-generated ID used to identify this event.
+
+response
+object
+
+Create a new Realtime response with these parameters
+
+
+Show properties
+type
+string
+
+The event type, must be response.create.
+
+OBJECT response.create
+{
+    "event_id": "event_234",
+    "type": "response.create",
+    "response": {
+        "modalities": ["text", "audio"],
+        "instructions": "Please assist the user.",
+        "voice": "sage",
+        "output_audio_format": "pcm16",
+        "tools": [
+            {
+                "type": "function",
+                "name": "calculate_sum",
+                "description": "Calculates the sum of two numbers.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "a": { "type": "number" },
+                        "b": { "type": "number" }
+                    },
+                    "required": ["a", "b"]
+                }
+            }
+        ],
+        "tool_choice": "auto",
+        "temperature": 0.8,
+        "max_output_tokens": 1024
+    }
+}
+response.cancel
+Send this event to cancel an in-progress response. The server will respond with a response.cancelled event or an error if there is no response to cancel.
+
+event_id
+string
+
+Optional client-generated ID used to identify this event.
+
+response_id
+string
+
+A specific response ID to cancel - if not provided, will cancel an in-progress response in the default conversation.
+
+type
+string
+
+The event type, must be response.cancel.
+
+OBJECT response.cancel
+{
+    "event_id": "event_567",
+    "type": "response.cancel"
+}
+transcription_session.update
+Send this event to update a transcription session.
+
+event_id
+string
+
+Optional client-generated ID used to identify this event.
+
+session
+object
+
+Realtime transcription session object configuration.
+
+
+Show properties
+type
+string
+
+The event type, must be transcription_session.update.
+
+OBJECT transcription_session.update
+{
+  "type": "transcription_session.update",
+  "session": {
+    "input_audio_format": "pcm16",
+    "input_audio_transcription": {
+      "model": "gpt-4o-transcribe",
+      "prompt": "",
+      "language": ""
+    },
+    "turn_detection": {
+      "type": "server_vad",
+      "threshold": 0.5,
+      "prefix_padding_ms": 300,
+      "silence_duration_ms": 500,
+      "create_response": true,
+    },
+    "input_audio_noise_reduction": {
+      "type": "near_field"
+    },
+    "include": [
+      "item.input_audio_transcription.logprobs",
+    ]
+  }
+}
+Server events
+These are events emitted from the OpenAI Realtime WebSocket server to the client.
+
+error
+Returned when an error occurs, which could be a client problem or a server problem. Most errors are recoverable and the session will stay open, we recommend to implementors to monitor and log error messages by default.
+
+error
+object
+
+Details of the error.
+
+
+Show properties
+event_id
+string
+
+The unique ID of the server event.
+
+type
+string
+
+The event type, must be error.
+
+OBJECT error
+{
+    "event_id": "event_890",
+    "type": "error",
+    "error": {
+        "type": "invalid_request_error",
+        "code": "invalid_event",
+        "message": "The 'type' field is missing.",
+        "param": null,
+        "event_id": "event_567"
+    }
+}
+session.created
+Returned when a Session is created. Emitted automatically when a new connection is established as the first server event. This event will contain the default Session configuration.
+
+event_id
+string
+
+The unique ID of the server event.
+
+session
+object
+
+Realtime session object configuration.
+
+
+Show properties
+type
+string
+
+The event type, must be session.created.
+
+OBJECT session.created
+{
+    "event_id": "event_1234",
+    "type": "session.created",
+    "session": {
+        "id": "sess_001",
+        "object": "realtime.session",
+        "model": "gpt-4o-realtime-preview",
+        "modalities": ["text", "audio"],
+        "instructions": "...model instructions here...",
+        "voice": "sage",
+        "input_audio_format": "pcm16",
+        "output_audio_format": "pcm16",
+        "input_audio_transcription": null,
+        "turn_detection": {
+            "type": "server_vad",
+            "threshold": 0.5,
+            "prefix_padding_ms": 300,
+            "silence_duration_ms": 200
+        },
+        "tools": [],
+        "tool_choice": "auto",
+        "temperature": 0.8,
+        "max_response_output_tokens": "inf"
+    }
+}
+session.updated
+Returned when a session is updated with a session.update event, unless there is an error.
+
+event_id
+string
+
+The unique ID of the server event.
+
+session
+object
+
+Realtime session object configuration.
+
+
+Show properties
+type
+string
+
+The event type, must be session.updated.
+
+OBJECT session.updated
+{
+    "event_id": "event_5678",
+    "type": "session.updated",
+    "session": {
+        "id": "sess_001",
+        "object": "realtime.session",
+        "model": "gpt-4o-realtime-preview",
+        "modalities": ["text"],
+        "instructions": "New instructions",
+        "voice": "sage",
+        "input_audio_format": "pcm16",
+        "output_audio_format": "pcm16",
+        "input_audio_transcription": {
+            "model": "whisper-1"
+        },
+        "turn_detection": null,
+        "tools": [],
+        "tool_choice": "none",
+        "temperature": 0.7,
+        "max_response_output_tokens": 200
+    }
+}
+conversation.created
+Returned when a conversation is created. Emitted right after session creation.
+
+conversation
+object
+
+The conversation resource.
+
+
+Show properties
+event_id
+string
+
+The unique ID of the server event.
+
+type
+string
+
+The event type, must be conversation.created.
+
+OBJECT conversation.created
+{
+    "event_id": "event_9101",
+    "type": "conversation.created",
+    "conversation": {
+        "id": "conv_001",
+        "object": "realtime.conversation"
+    }
+}
+conversation.item.created
+Returned when a conversation item is created. There are several scenarios that produce this event:
+
+The server is generating a Response, which if successful will produce either one or two Items, which will be of type message (role assistant) or type function_call.
+The input audio buffer has been committed, either by the client or the server (in server_vad mode). The server will take the content of the input audio buffer and add it to a new user message Item.
+The client has sent a conversation.item.create event to add a new Item to the Conversation.
+event_id
+string
+
+The unique ID of the server event.
+
+item
+object
+
+The item to add to the conversation.
+
+
+Show properties
+previous_item_id
+string
+
+The ID of the preceding item in the Conversation context, allows the client to understand the order of the conversation.
+
+type
+string
+
+The event type, must be conversation.item.created.
+
+OBJECT conversation.item.created
+{
+    "event_id": "event_1920",
+    "type": "conversation.item.created",
+    "previous_item_id": "msg_002",
+    "item": {
+        "id": "msg_003",
+        "object": "realtime.item",
+        "type": "message",
+        "status": "completed",
+        "role": "user",
+        "content": []
+    }
+}
+conversation.item.input_audio_transcription.completed
+This event is the output of audio transcription for user audio written to the user audio buffer. Transcription begins when the input audio buffer is committed by the client or server (in server_vad mode). Transcription runs asynchronously with Response creation, so this event may come before or after the Response events.
+
+Realtime API models accept audio natively, and thus input transcription is a separate process run on a separate ASR (Automatic Speech Recognition) model, currently always whisper-1. Thus the transcript may diverge somewhat from the model's interpretation, and should be treated as a rough guide.
+
+content_index
+integer
+
+The index of the content part containing the audio.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the user message item containing the audio.
+
+logprobs
+array or null
+
+The log probabilities of the transcription.
+
+
+Show properties
+transcript
+string
+
+The transcribed text.
+
+type
+string
+
+The event type, must be conversation.item.input_audio_transcription.completed.
+
+OBJECT conversation.item.input_audio_transcription.completed
+{
+    "event_id": "event_2122",
+    "type": "conversation.item.input_audio_transcription.completed",
+    "item_id": "msg_003",
+    "content_index": 0,
+    "transcript": "Hello, how are you?"
+}
+conversation.item.input_audio_transcription.delta
+Returned when the text value of an input audio transcription content part is updated.
+
+content_index
+integer
+
+The index of the content part in the item's content array.
+
+delta
+string
+
+The text delta.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the item.
+
+logprobs
+array or null
+
+The log probabilities of the transcription.
+
+
+Show properties
+type
+string
+
+The event type, must be conversation.item.input_audio_transcription.delta.
+
+OBJECT conversation.item.input_audio_transcription.delta
+{
+  "type": "conversation.item.input_audio_transcription.delta",
+  "event_id": "event_001",
+  "item_id": "item_001",
+  "content_index": 0,
+  "delta": "Hello"
+}
+conversation.item.input_audio_transcription.failed
+Returned when input audio transcription is configured, and a transcription request for a user message failed. These events are separate from other error events so that the client can identify the related Item.
+
+content_index
+integer
+
+The index of the content part containing the audio.
+
+error
+object
+
+Details of the transcription error.
+
+
+Show properties
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the user message item.
+
+type
+string
+
+The event type, must be conversation.item.input_audio_transcription.failed.
+
+OBJECT conversation.item.input_audio_transcription.failed
+{
+    "event_id": "event_2324",
+    "type": "conversation.item.input_audio_transcription.failed",
+    "item_id": "msg_003",
+    "content_index": 0,
+    "error": {
+        "type": "transcription_error",
+        "code": "audio_unintelligible",
+        "message": "The audio could not be transcribed.",
+        "param": null
+    }
+}
+conversation.item.truncated
+Returned when an earlier assistant audio message item is truncated by the client with a conversation.item.truncate event. This event is used to synchronize the server's understanding of the audio with the client's playback.
+
+This action will truncate the audio and remove the server-side text transcript to ensure there is no text in the context that hasn't been heard by the user.
+
+audio_end_ms
+integer
+
+The duration up to which the audio was truncated, in milliseconds.
+
+content_index
+integer
+
+The index of the content part that was truncated.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the assistant message item that was truncated.
+
+type
+string
+
+The event type, must be conversation.item.truncated.
+
+OBJECT conversation.item.truncated
+{
+    "event_id": "event_2526",
+    "type": "conversation.item.truncated",
+    "item_id": "msg_004",
+    "content_index": 0,
+    "audio_end_ms": 1500
+}
+conversation.item.deleted
+Returned when an item in the conversation is deleted by the client with a conversation.item.delete event. This event is used to synchronize the server's understanding of the conversation history with the client's view.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the item that was deleted.
+
+type
+string
+
+The event type, must be conversation.item.deleted.
+
+OBJECT conversation.item.deleted
+{
+    "event_id": "event_2728",
+    "type": "conversation.item.deleted",
+    "item_id": "msg_005"
+}
+input_audio_buffer.committed
+Returned when an input audio buffer is committed, either by the client or automatically in server VAD mode. The item_id property is the ID of the user message item that will be created, thus a conversation.item.created event will also be sent to the client.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the user message item that will be created.
+
+previous_item_id
+string
+
+The ID of the preceding item after which the new item will be inserted.
+
+type
+string
+
+The event type, must be input_audio_buffer.committed.
+
+OBJECT input_audio_buffer.committed
+{
+    "event_id": "event_1121",
+    "type": "input_audio_buffer.committed",
+    "previous_item_id": "msg_001",
+    "item_id": "msg_002"
+}
+input_audio_buffer.cleared
+Returned when the input audio buffer is cleared by the client with a input_audio_buffer.clear event.
+
+event_id
+string
+
+The unique ID of the server event.
+
+type
+string
+
+The event type, must be input_audio_buffer.cleared.
+
+OBJECT input_audio_buffer.cleared
+{
+    "event_id": "event_1314",
+    "type": "input_audio_buffer.cleared"
+}
+input_audio_buffer.speech_started
+Sent by the server when in server_vad mode to indicate that speech has been detected in the audio buffer. This can happen any time audio is added to the buffer (unless speech is already detected). The client may want to use this event to interrupt audio playback or provide visual feedback to the user.
+
+The client should expect to receive a input_audio_buffer.speech_stopped event when speech stops. The item_id property is the ID of the user message item that will be created when speech stops and will also be included in the input_audio_buffer.speech_stopped event (unless the client manually commits the audio buffer during VAD activation).
+
+audio_start_ms
+integer
+
+Milliseconds from the start of all audio written to the buffer during the session when speech was first detected. This will correspond to the beginning of audio sent to the model, and thus includes the prefix_padding_ms configured in the Session.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the user message item that will be created when speech stops.
+
+type
+string
+
+The event type, must be input_audio_buffer.speech_started.
+
+OBJECT input_audio_buffer.speech_started
+{
+    "event_id": "event_1516",
+    "type": "input_audio_buffer.speech_started",
+    "audio_start_ms": 1000,
+    "item_id": "msg_003"
+}
+input_audio_buffer.speech_stopped
+Returned in server_vad mode when the server detects the end of speech in the audio buffer. The server will also send an conversation.item.created event with the user message item that is created from the audio buffer.
+
+audio_end_ms
+integer
+
+Milliseconds since the session started when speech stopped. This will correspond to the end of audio sent to the model, and thus includes the min_silence_duration_ms configured in the Session.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the user message item that will be created.
+
+type
+string
+
+The event type, must be input_audio_buffer.speech_stopped.
+
+OBJECT input_audio_buffer.speech_stopped
+{
+    "event_id": "event_1718",
+    "type": "input_audio_buffer.speech_stopped",
+    "audio_end_ms": 2000,
+    "item_id": "msg_003"
+}
+response.created
+Returned when a new Response is created. The first event of response creation, where the response is in an initial state of in_progress.
+
+event_id
+string
+
+The unique ID of the server event.
+
+response
+object
+
+The response resource.
+
+
+Show properties
+type
+string
+
+The event type, must be response.created.
+
+OBJECT response.created
+{
+    "event_id": "event_2930",
+    "type": "response.created",
+    "response": {
+        "id": "resp_001",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "status_details": null,
+        "output": [],
+        "usage": null
+    }
+}
+response.done
+Returned when a Response is done streaming. Always emitted, no matter the final state. The Response object included in the response.done event will include all output Items in the Response but will omit the raw audio data.
+
+event_id
+string
+
+The unique ID of the server event.
+
+response
+object
+
+The response resource.
+
+
+Show properties
+type
+string
+
+The event type, must be response.done.
+
+OBJECT response.done
+{
+    "event_id": "event_3132",
+    "type": "response.done",
+    "response": {
+        "id": "resp_001",
+        "object": "realtime.response",
+        "status": "completed",
+        "status_details": null,
+        "output": [
+            {
+                "id": "msg_006",
+                "object": "realtime.item",
+                "type": "message",
+                "status": "completed",
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Sure, how can I assist you today?"
+                    }
+                ]
+            }
+        ],
+        "usage": {
+            "total_tokens":275,
+            "input_tokens":127,
+            "output_tokens":148,
+            "input_token_details": {
+                "cached_tokens":384,
+                "text_tokens":119,
+                "audio_tokens":8,
+                "cached_tokens_details": {
+                    "text_tokens": 128,
+                    "audio_tokens": 256
+                }
+            },
+            "output_token_details": {
+              "text_tokens":36,
+              "audio_tokens":112
+            }
+        }
+    }
+}
+response.output_item.added
+Returned when a new Item is created during Response generation.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item
+object
+
+The item to add to the conversation.
+
+
+Show properties
+output_index
+integer
+
+The index of the output item in the Response.
+
+response_id
+string
+
+The ID of the Response to which the item belongs.
+
+type
+string
+
+The event type, must be response.output_item.added.
+
+OBJECT response.output_item.added
+{
+    "event_id": "event_3334",
+    "type": "response.output_item.added",
+    "response_id": "resp_001",
+    "output_index": 0,
+    "item": {
+        "id": "msg_007",
+        "object": "realtime.item",
+        "type": "message",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+    }
+}
+response.output_item.done
+Returned when an Item is done streaming. Also emitted when a Response is interrupted, incomplete, or cancelled.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item
+object
+
+The item to add to the conversation.
+
+
+Show properties
+output_index
+integer
+
+The index of the output item in the Response.
+
+response_id
+string
+
+The ID of the Response to which the item belongs.
+
+type
+string
+
+The event type, must be response.output_item.done.
+
+OBJECT response.output_item.done
+{
+    "event_id": "event_3536",
+    "type": "response.output_item.done",
+    "response_id": "resp_001",
+    "output_index": 0,
+    "item": {
+        "id": "msg_007",
+        "object": "realtime.item",
+        "type": "message",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+            {
+                "type": "text",
+                "text": "Sure, I can help with that."
+            }
+        ]
+    }
+}
+response.content_part.added
+Returned when a new content part is added to an assistant message item during response generation.
+
+content_index
+integer
+
+The index of the content part in the item's content array.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the item to which the content part was added.
+
+output_index
+integer
+
+The index of the output item in the response.
+
+part
+object
+
+The content part that was added.
+
+
+Show properties
+response_id
+string
+
+The ID of the response.
+
+type
+string
+
+The event type, must be response.content_part.added.
+
+OBJECT response.content_part.added
+{
+    "event_id": "event_3738",
+    "type": "response.content_part.added",
+    "response_id": "resp_001",
+    "item_id": "msg_007",
+    "output_index": 0,
+    "content_index": 0,
+    "part": {
+        "type": "text",
+        "text": ""
+    }
+}
+response.content_part.done
+Returned when a content part is done streaming in an assistant message item. Also emitted when a Response is interrupted, incomplete, or cancelled.
+
+content_index
+integer
+
+The index of the content part in the item's content array.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the item.
+
+output_index
+integer
+
+The index of the output item in the response.
+
+part
+object
+
+The content part that is done.
+
+
+Show properties
+response_id
+string
+
+The ID of the response.
+
+type
+string
+
+The event type, must be response.content_part.done.
+
+OBJECT response.content_part.done
+{
+    "event_id": "event_3940",
+    "type": "response.content_part.done",
+    "response_id": "resp_001",
+    "item_id": "msg_007",
+    "output_index": 0,
+    "content_index": 0,
+    "part": {
+        "type": "text",
+        "text": "Sure, I can help with that."
+    }
+}
+response.text.delta
+Returned when the text value of a "text" content part is updated.
+
+content_index
+integer
+
+The index of the content part in the item's content array.
+
+delta
+string
+
+The text delta.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the item.
+
+output_index
+integer
+
+The index of the output item in the response.
+
+response_id
+string
+
+The ID of the response.
+
+type
+string
+
+The event type, must be response.text.delta.
+
+OBJECT response.text.delta
+{
+    "event_id": "event_4142",
+    "type": "response.text.delta",
+    "response_id": "resp_001",
+    "item_id": "msg_007",
+    "output_index": 0,
+    "content_index": 0,
+    "delta": "Sure, I can h"
+}
+response.text.done
+Returned when the text value of a "text" content part is done streaming. Also emitted when a Response is interrupted, incomplete, or cancelled.
+
+content_index
+integer
+
+The index of the content part in the item's content array.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the item.
+
+output_index
+integer
+
+The index of the output item in the response.
+
+response_id
+string
+
+The ID of the response.
+
+text
+string
+
+The final text content.
+
+type
+string
+
+The event type, must be response.text.done.
+
+OBJECT response.text.done
+{
+    "event_id": "event_4344",
+    "type": "response.text.done",
+    "response_id": "resp_001",
+    "item_id": "msg_007",
+    "output_index": 0,
+    "content_index": 0,
+    "text": "Sure, I can help with that."
+}
+response.audio_transcript.delta
+Returned when the model-generated transcription of audio output is updated.
+
+content_index
+integer
+
+The index of the content part in the item's content array.
+
+delta
+string
+
+The transcript delta.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the item.
+
+output_index
+integer
+
+The index of the output item in the response.
+
+response_id
+string
+
+The ID of the response.
+
+type
+string
+
+The event type, must be response.audio_transcript.delta.
+
+OBJECT response.audio_transcript.delta
+{
+    "event_id": "event_4546",
+    "type": "response.audio_transcript.delta",
+    "response_id": "resp_001",
+    "item_id": "msg_008",
+    "output_index": 0,
+    "content_index": 0,
+    "delta": "Hello, how can I a"
+}
+response.audio_transcript.done
+Returned when the model-generated transcription of audio output is done streaming. Also emitted when a Response is interrupted, incomplete, or cancelled.
+
+content_index
+integer
+
+The index of the content part in the item's content array.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the item.
+
+output_index
+integer
+
+The index of the output item in the response.
+
+response_id
+string
+
+The ID of the response.
+
+transcript
+string
+
+The final transcript of the audio.
+
+type
+string
+
+The event type, must be response.audio_transcript.done.
+
+OBJECT response.audio_transcript.done
+{
+    "event_id": "event_4748",
+    "type": "response.audio_transcript.done",
+    "response_id": "resp_001",
+    "item_id": "msg_008",
+    "output_index": 0,
+    "content_index": 0,
+    "transcript": "Hello, how can I assist you today?"
+}
+response.audio.delta
+Returned when the model-generated audio is updated.
+
+content_index
+integer
+
+The index of the content part in the item's content array.
+
+delta
+string
+
+Base64-encoded audio data delta.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the item.
+
+output_index
+integer
+
+The index of the output item in the response.
+
+response_id
+string
+
+The ID of the response.
+
+type
+string
+
+The event type, must be response.audio.delta.
+
+OBJECT response.audio.delta
+{
+    "event_id": "event_4950",
+    "type": "response.audio.delta",
+    "response_id": "resp_001",
+    "item_id": "msg_008",
+    "output_index": 0,
+    "content_index": 0,
+    "delta": "Base64EncodedAudioDelta"
+}
+response.audio.done
+Returned when the model-generated audio is done. Also emitted when a Response is interrupted, incomplete, or cancelled.
+
+content_index
+integer
+
+The index of the content part in the item's content array.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the item.
+
+output_index
+integer
+
+The index of the output item in the response.
+
+response_id
+string
+
+The ID of the response.
+
+type
+string
+
+The event type, must be response.audio.done.
+
+OBJECT response.audio.done
+{
+    "event_id": "event_5152",
+    "type": "response.audio.done",
+    "response_id": "resp_001",
+    "item_id": "msg_008",
+    "output_index": 0,
+    "content_index": 0
+}
+response.function_call_arguments.delta
+Returned when the model-generated function call arguments are updated.
+
+call_id
+string
+
+The ID of the function call.
+
+delta
+string
+
+The arguments delta as a JSON string.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the function call item.
+
+output_index
+integer
+
+The index of the output item in the response.
+
+response_id
+string
+
+The ID of the response.
+
+type
+string
+
+The event type, must be response.function_call_arguments.delta.
+
+OBJECT response.function_call_arguments.delta
+{
+    "event_id": "event_5354",
+    "type": "response.function_call_arguments.delta",
+    "response_id": "resp_002",
+    "item_id": "fc_001",
+    "output_index": 0,
+    "call_id": "call_001",
+    "delta": "{\"location\": \"San\""
+}
+response.function_call_arguments.done
+Returned when the model-generated function call arguments are done streaming. Also emitted when a Response is interrupted, incomplete, or cancelled.
+
+arguments
+string
+
+The final arguments as a JSON string.
+
+call_id
+string
+
+The ID of the function call.
+
+event_id
+string
+
+The unique ID of the server event.
+
+item_id
+string
+
+The ID of the function call item.
+
+output_index
+integer
+
+The index of the output item in the response.
+
+response_id
+string
+
+The ID of the response.
+
+type
+string
+
+The event type, must be response.function_call_arguments.done.
+
+OBJECT response.function_call_arguments.done
+{
+    "event_id": "event_5556",
+    "type": "response.function_call_arguments.done",
+    "response_id": "resp_002",
+    "item_id": "fc_001",
+    "output_index": 0,
+    "call_id": "call_001",
+    "arguments": "{\"location\": \"San Francisco\"}"
+}
+transcription_session.updated
+Returned when a transcription session is updated with a transcription_session.update event, unless there is an error.
+
+event_id
+string
+
+The unique ID of the server event.
+
+session
+object
+
+A new Realtime transcription session configuration.
+
+When a session is created on the server via REST API, the session object also contains an ephemeral key. Default TTL for keys is one minute. This property is not present when a session is updated via the WebSocket API.
+
+
+Show properties
+type
+string
+
+The event type, must be transcription_session.updated.
+
+OBJECT transcription_session.updated
+{
+  "event_id": "event_5678",
+  "type": "transcription_session.updated",
+  "session": {
+    "id": "sess_001",
+    "object": "realtime.transcription_session",
+    "input_audio_format": "pcm16",
+    "input_audio_transcription": {
+      "model": "gpt-4o-transcribe",
+      "prompt": "",
+      "language": ""
+    },
+    "turn_detection": {
+      "type": "server_vad",
+      "threshold": 0.5,
+      "prefix_padding_ms": 300,
+      "silence_duration_ms": 500,
+      "create_response": true,
+      // "interrupt_response": false  -- this will NOT be returned
+    },
+    "input_audio_noise_reduction": {
+      "type": "near_field"
+    },
+    "include": [
+      "item.input_audio_transcription.avg_logprob",
+    ],
+  }
+}
+rate_limits.updated
+Emitted at the beginning of a Response to indicate the updated rate limits. When a Response is created some tokens will be "reserved" for the output tokens, the rate limits shown here reflect that reservation, which is then adjusted accordingly once the Response is completed.
+
+event_id
+string
+
+The unique ID of the server event.
+
+rate_limits
+array
+
+List of rate limit information.
+
+
+Show properties
+type
+string
+
+The event type, must be rate_limits.updated.
+
+OBJECT rate_limits.updated
+{
+    "event_id": "event_5758",
+    "type": "rate_limits.updated",
+    "rate_limits": [
+        {
+            "name": "requests",
+            "limit": 1000,
+            "remaining": 999,
+            "reset_seconds": 60
+        },
+        {
+            "name": "tokens",
+            "limit": 50000,
+            "remaining": 49950,
+            "reset_seconds": 60
+        }
+    ]
+}
+Audio
+Learn how to turn audio into text or text into audio.
+
+Related guide: Speech to text
+
+Create speech
+post
+ 
+https://api.openai.com/v1/audio/speech
+Generates audio from the input text.
+
+Request body
+input
+string
+
+Required
+The text to generate audio for. The maximum length is 4096 characters.
+
+model
+string
+
+Required
+One of the available TTS models: tts-1, tts-1-hd or gpt-4o-mini-tts.
+
+voice
+string
+
+Required
+The voice to use when generating the audio. Supported voices are alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, and verse. Previews of the voices are available in the Text to speech guide.
+
+instructions
+string
+
+Optional
+Control the voice of your generated audio with additional instructions. Does not work with tts-1 or tts-1-hd.
+
+response_format
+string
+
+Optional
+Defaults to mp3
+The format to audio in. Supported formats are mp3, opus, aac, flac, wav, and pcm.
+
+speed
+number
+
+Optional
+Defaults to 1
+The speed of the generated audio. Select a value from 0.25 to 4.0. 1.0 is the default.
+
+Returns
+The audio file content.
+
+Example request
+curl https://api.openai.com/v1/audio/speech \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o-mini-tts",
+    "input": "The quick brown fox jumped over the lazy dog.",
+    "voice": "alloy"
+  }' \
+  --output speech.mp3
+Create transcription
+post
+ 
+https://api.openai.com/v1/audio/transcriptions
+Transcribes audio into the input language.
+
+Request body
+file
+file
+
+Required
+The audio file object (not file name) to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
+
+model
+string
+
+Required
+ID of the model to use. The options are gpt-4o-transcribe, gpt-4o-mini-transcribe, and whisper-1 (which is powered by our open source Whisper V2 model).
+
+include[]
+array
+
+Optional
+Additional information to include in the transcription response. logprobs will return the log probabilities of the tokens in the response to understand the model's confidence in the transcription. logprobs only works with response_format set to json and only with the models gpt-4o-transcribe and gpt-4o-mini-transcribe.
+
+language
+string
+
+Optional
+The language of the input audio. Supplying the input language in ISO-639-1 (e.g. en) format will improve accuracy and latency.
+
+prompt
+string
+
+Optional
+An optional text to guide the model's style or continue a previous audio segment. The prompt should match the audio language.
+
+response_format
+string
+
+Optional
+Defaults to json
+The format of the output, in one of these options: json, text, srt, verbose_json, or vtt. For gpt-4o-transcribe and gpt-4o-mini-transcribe, the only supported format is json.
+
+stream
+boolean or null
+
+Optional
+Defaults to false
+If set to true, the model response data will be streamed to the client as it is generated using server-sent events. See the Streaming section of the Speech-to-Text guide for more information.
+
+Note: Streaming is not supported for the whisper-1 model and will be ignored.
+
+temperature
+number
+
+Optional
+Defaults to 0
+The sampling temperature, between 0 and 1. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. If set to 0, the model will use log probability to automatically increase the temperature until certain thresholds are hit.
+
+timestamp_granularities[]
+array
+
+Optional
+Defaults to segment
+The timestamp granularities to populate for this transcription. response_format must be set verbose_json to use timestamp granularities. Either or both of these options are supported: word, or segment. Note: There is no additional latency for segment timestamps, but generating word timestamps incurs additional latency.
+
+Returns
+The transcription object, a verbose transcription object or a stream of transcript events.
+
+
+Default
+
+Streaming
+
+Logprobs
+
+Word timestamps
+
+Segment timestamps
+Example request
+curl https://api.openai.com/v1/audio/transcriptions \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: multipart/form-data" \
+  -F file="@/path/to/file/audio.mp3" \
+  -F model="gpt-4o-transcribe"
+Response
+{
+  "text": "Imagine the wildest idea that you've ever had, and you're curious about how it might scale to something that's a 100, a 1,000 times bigger. This is a place where you can get to do that."
+}
+Create translation
+post
+ 
+https://api.openai.com/v1/audio/translations
+Translates audio into English.
+
+Request body
+file
+file
+
+Required
+The audio file object (not file name) translate, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
+
+model
+string or "whisper-1"
+
+Required
+ID of the model to use. Only whisper-1 (which is powered by our open source Whisper V2 model) is currently available.
+
+prompt
+string
+
+Optional
+An optional text to guide the model's style or continue a previous audio segment. The prompt should be in English.
+
+response_format
+string
+
+Optional
+Defaults to json
+The format of the output, in one of these options: json, text, srt, verbose_json, or vtt.
+
+temperature
+number
+
+Optional
+Defaults to 0
+The sampling temperature, between 0 and 1. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. If set to 0, the model will use log probability to automatically increase the temperature until certain thresholds are hit.
+
+Returns
+The translated text.
+
+Example request
+curl https://api.openai.com/v1/audio/translations \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: multipart/form-data" \
+  -F file="@/path/to/file/german.m4a" \
+  -F model="whisper-1"
+Response
+{
+  "text": "Hello, my name is Wolfgang and I come from Germany. Where are you heading today?"
+}
+The transcription object (JSON)
+Represents a transcription response returned by model, based on the provided input.
+
+logprobs
+array
+
+The log probabilities of the tokens in the transcription. Only returned with the models gpt-4o-transcribe and gpt-4o-mini-transcribe if logprobs is added to the include array.
+
+
+Show properties
+text
+string
+
+The transcribed text.
+
+OBJECT The transcription object (JSON)
+{
+  "text": "Imagine the wildest idea that you've ever had, and you're curious about how it might scale to something that's a 100, a 1,000 times bigger. This is a place where you can get to do that."
+}
+The transcription object (Verbose JSON)
+Represents a verbose json transcription response returned by model, based on the provided input.
+
+duration
+number
+
+The duration of the input audio.
+
+language
+string
+
+The language of the input audio.
+
+segments
+array
+
+Segments of the transcribed text and their corresponding details.
+
+
+Show properties
+text
+string
+
+The transcribed text.
+
+words
+array
+
+Extracted words and their corresponding timestamps.
+
+
+Show properties
+OBJECT The transcription object (Verbose JSON)
+{
+  "task": "transcribe",
+  "language": "english",
+  "duration": 8.470000267028809,
+  "text": "The beach was a popular spot on a hot summer day. People were swimming in the ocean, building sandcastles, and playing beach volleyball.",
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 0.0,
+      "end": 3.319999933242798,
+      "text": " The beach was a popular spot on a hot summer day.",
+      "tokens": [
+        50364, 440, 7534, 390, 257, 3743, 4008, 322, 257, 2368, 4266, 786, 13, 50530
+      ],
+      "temperature": 0.0,
+      "avg_logprob": -0.2860786020755768,
+      "compression_ratio": 1.2363636493682861,
+      "no_speech_prob": 0.00985979475080967
+    },
+    ...
+  ]
+}
+Stream Event (transcript.text.delta)
+Emitted when there is an additional text delta. This is also the first event emitted when the transcription starts. Only emitted when you create a transcription with the Stream parameter set to true.
+
+delta
+string
+
+The text delta that was additionally transcribed.
+
+logprobs
+array
+
+The log probabilities of the delta. Only included if you create a transcription with the include[] parameter set to logprobs.
+
+
+Show properties
+type
+string
+
+The type of the event. Always transcript.text.delta.
+
+OBJECT Stream Event (transcript.text.delta)
+{
+  "type": "transcript.text.delta",
+  "delta": " wonderful"
+}
+Stream Event (transcript.text.done)
+Emitted when the transcription is complete. Contains the complete transcription text. Only emitted when you create a transcription with the Stream parameter set to true.
+
+logprobs
+array
+
+The log probabilities of the individual tokens in the transcription. Only included if you create a transcription with the include[] parameter set to logprobs.
+
+
+Show properties
+text
+string
+
+The text that was transcribed.
+
+type
+string
+
+The type of the event. Always transcript.text.done.
+
+OBJECT Stream Event (transcript.text.done)
+{
+  "type": "transcript.text.done",
+  "text": "I see skies of blue and clouds of white, the bright blessed days, the dark sacred nights, and I think to myself, what a wonderful world."
+}
+Embeddings
+Get a vector representation of a given input that can be easily consumed by machine learning models and algorithms. Related guide: Embeddings
+
+Create embeddings
+post
+ 
+https://api.openai.com/v1/embeddings
+Creates an embedding vector representing the input text.
+
+Request body
+input
+string or array
+
+Required
+Input text to embed, encoded as a string or array of tokens. To embed multiple inputs in a single request, pass an array of strings or array of token arrays. The input must not exceed the max input tokens for the model (8192 tokens for text-embedding-ada-002), cannot be an empty string, and any array must be 2048 dimensions or less. Example Python code for counting tokens. Some models may also impose a limit on total number of tokens summed across inputs.
+
+
+Show possible types
+model
+string
+
+Required
+ID of the model to use. You can use the List models API to see all of your available models, or see our Model overview for descriptions of them.
+
+dimensions
+integer
+
+Optional
+The number of dimensions the resulting output embeddings should have. Only supported in text-embedding-3 and later models.
+
+encoding_format
+string
+
+Optional
+Defaults to float
+The format to return the embeddings in. Can be either float or base64.
+
+user
+string
+
+Optional
+A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse. Learn more.
+
+Returns
+A list of embedding objects.
+
+Example request
+curl https://api.openai.com/v1/embeddings \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": "The food was delicious and the waiter...",
+    "model": "text-embedding-ada-002",
+    "encoding_format": "float"
+  }'
+Response
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "embedding",
+      "embedding": [
+        0.0023064255,
+        -0.009327292,
+        .... (1536 floats total for ada-002)
+        -0.0028842222,
+      ],
+      "index": 0
+    }
+  ],
+  "model": "text-embedding-ada-002",
+  "usage": {
+    "prompt_tokens": 8,
+    "total_tokens": 8
+  }
+}
+The embedding object
+Represents an embedding vector returned by embedding endpoint.
+
+embedding
+array
+
+The embedding vector, which is a list of floats. The length of vector depends on the model as listed in the embedding guide.
+
+index
+integer
+
+The index of the embedding in the list of embeddings.
+
+object
+string
+
+The object type, which is always "embedding".
+
+OBJECT The embedding object
+{
+  "object": "embedding",
+  "embedding": [
+    0.0023064255,
+    -0.009327292,
+    .... (1536 floats total for ada-002)
+    -0.0028842222,
+  ],
+  "index": 0
+}
+Fine-tuning
+Manage fine-tuning jobs to tailor a model to your specific training data. Related guide: Fine-tune models
+
+Create fine-tuning job
+post
+ 
+https://api.openai.com/v1/fine_tuning/jobs
+Creates a fine-tuning job which begins the process of creating a new model from a given dataset.
+
+Response includes details of the enqueued job including job status and the name of the fine-tuned models once complete.
+
+Learn more about fine-tuning
+
+Request body
+model
+string
+
+Required
+The name of the model to fine-tune. You can select one of the supported models.
+
+training_file
+string
+
+Required
+The ID of an uploaded file that contains training data.
+
+See upload file for how to upload a file.
+
+Your dataset must be formatted as a JSONL file. Additionally, you must upload your file with the purpose fine-tune.
+
+The contents of the file should differ depending on if the model uses the chat, completions format, or if the fine-tuning method uses the preference format.
+
+See the fine-tuning guide for more details.
+
+hyperparameters
+Deprecated
+object
+
+Optional
+The hyperparameters used for the fine-tuning job. This value is now deprecated in favor of method, and should be passed in under the method parameter.
+
+
+Show properties
+integrations
+array or null
+
+Optional
+A list of integrations to enable for your fine-tuning job.
+
+
+Show properties
+metadata
+map
+
+Optional
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+method
+object
+
+Optional
+The method used for fine-tuning.
+
+
+Show properties
+seed
+integer or null
+
+Optional
+The seed controls the reproducibility of the job. Passing in the same seed and job parameters should produce the same results, but may differ in rare cases. If a seed is not specified, one will be generated for you.
+
+suffix
+string or null
+
+Optional
+Defaults to null
+A string of up to 64 characters that will be added to your fine-tuned model name.
+
+For example, a suffix of "custom-model-name" would produce a model name like ft:gpt-4o-mini:openai:custom-model-name:7p4lURel.
+
+validation_file
+string or null
+
+Optional
+The ID of an uploaded file that contains validation data.
+
+If you provide this file, the data is used to generate validation metrics periodically during fine-tuning. These metrics can be viewed in the fine-tuning results file. The same data should not be present in both train and validation files.
+
+Your dataset must be formatted as a JSONL file. You must upload your file with the purpose fine-tune.
+
+See the fine-tuning guide for more details.
+
+Returns
+A fine-tuning.job object.
+
+
+Default
+
+Epochs
+
+Validation file
+
+DPO
+
+W&B Integration
+Example request
+curl https://api.openai.com/v1/fine_tuning/jobs \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "training_file": "file-BK7bzQj3FfZFXr7DbL6xJwfo",
+    "model": "gpt-4o-mini"
+  }'
+Response
+{
+  "object": "fine_tuning.job",
+  "id": "ftjob-abc123",
+  "model": "gpt-4o-mini-2024-07-18",
+  "created_at": 1721764800,
+  "fine_tuned_model": null,
+  "organization_id": "org-123",
+  "result_files": [],
+  "status": "queued",
+  "validation_file": null,
+  "training_file": "file-abc123",
+  "method": {
+    "type": "supervised",
+    "supervised": {
+      "hyperparameters": {
+        "batch_size": "auto",
+        "learning_rate_multiplier": "auto",
+        "n_epochs": "auto",
+      }
+    }
+  },
+  "metadata": null
+}
+List fine-tuning jobs
+get
+ 
+https://api.openai.com/v1/fine_tuning/jobs
+List your organization's fine-tuning jobs
+
+Query parameters
+after
+string
+
+Optional
+Identifier for the last job from the previous pagination request.
+
+limit
+integer
+
+Optional
+Defaults to 20
+Number of fine-tuning jobs to retrieve.
+
+metadata
+object or null
+
+Optional
+Optional metadata filter. To filter, use the syntax metadata[k]=v. Alternatively, set metadata=null to indicate no metadata.
+
+Returns
+A list of paginated fine-tuning job objects.
+
+Example request
+curl https://api.openai.com/v1/fine_tuning/jobs?limit=2&metadata[key]=value \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "fine_tuning.job",
+      "id": "ftjob-abc123",
+      "model": "gpt-4o-mini-2024-07-18",
+      "created_at": 1721764800,
+      "fine_tuned_model": null,
+      "organization_id": "org-123",
+      "result_files": [],
+      "status": "queued",
+      "validation_file": null,
+      "training_file": "file-abc123",
+      "metadata": {
+        "key": "value"
+      }
+    },
+    { ... },
+    { ... }
+  ], "has_more": true
+}
+List fine-tuning events
+get
+ 
+https://api.openai.com/v1/fine_tuning/jobs/{fine_tuning_job_id}/events
+Get status updates for a fine-tuning job.
+
+Path parameters
+fine_tuning_job_id
+string
+
+Required
+The ID of the fine-tuning job to get events for.
+
+Query parameters
+after
+string
+
+Optional
+Identifier for the last event from the previous pagination request.
+
+limit
+integer
+
+Optional
+Defaults to 20
+Number of events to retrieve.
+
+Returns
+A list of fine-tuning event objects.
+
+Example request
+curl https://api.openai.com/v1/fine_tuning/jobs/ftjob-abc123/events \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "fine_tuning.job.event",
+      "id": "ft-event-ddTJfwuMVpfLXseO0Am0Gqjm",
+      "created_at": 1721764800,
+      "level": "info",
+      "message": "Fine tuning job successfully completed",
+      "data": null,
+      "type": "message"
+    },
+    {
+      "object": "fine_tuning.job.event",
+      "id": "ft-event-tyiGuB72evQncpH87xe505Sv",
+      "created_at": 1721764800,
+      "level": "info",
+      "message": "New fine-tuned model created: ft:gpt-4o-mini:openai::7p4lURel",
+      "data": null,
+      "type": "message"
+    }
+  ],
+  "has_more": true
+}
+List fine-tuning checkpoints
+get
+ 
+https://api.openai.com/v1/fine_tuning/jobs/{fine_tuning_job_id}/checkpoints
+List checkpoints for a fine-tuning job.
+
+Path parameters
+fine_tuning_job_id
+string
+
+Required
+The ID of the fine-tuning job to get checkpoints for.
+
+Query parameters
+after
+string
+
+Optional
+Identifier for the last checkpoint ID from the previous pagination request.
+
+limit
+integer
+
+Optional
+Defaults to 10
+Number of checkpoints to retrieve.
+
+Returns
+A list of fine-tuning checkpoint objects for a fine-tuning job.
+
+Example request
+curl https://api.openai.com/v1/fine_tuning/jobs/ftjob-abc123/checkpoints \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "object": "list"
+  "data": [
+    {
+      "object": "fine_tuning.job.checkpoint",
+      "id": "ftckpt_zc4Q7MP6XxulcVzj4MZdwsAB",
+      "created_at": 1721764867,
+      "fine_tuned_model_checkpoint": "ft:gpt-4o-mini-2024-07-18:my-org:custom-suffix:96olL566:ckpt-step-2000",
+      "metrics": {
+        "full_valid_loss": 0.134,
+        "full_valid_mean_token_accuracy": 0.874
+      },
+      "fine_tuning_job_id": "ftjob-abc123",
+      "step_number": 2000,
+    },
+    {
+      "object": "fine_tuning.job.checkpoint",
+      "id": "ftckpt_enQCFmOTGj3syEpYVhBRLTSy",
+      "created_at": 1721764800,
+      "fine_tuned_model_checkpoint": "ft:gpt-4o-mini-2024-07-18:my-org:custom-suffix:7q8mpxmy:ckpt-step-1000",
+      "metrics": {
+        "full_valid_loss": 0.167,
+        "full_valid_mean_token_accuracy": 0.781
+      },
+      "fine_tuning_job_id": "ftjob-abc123",
+      "step_number": 1000,
+    },
+  ],
+  "first_id": "ftckpt_zc4Q7MP6XxulcVzj4MZdwsAB",
+  "last_id": "ftckpt_enQCFmOTGj3syEpYVhBRLTSy",
+  "has_more": true
+}
+List checkpoint permissions
+get
+ 
+https://api.openai.com/v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions
+NOTE: This endpoint requires an admin API key.
+
+Organization owners can use this endpoint to view all permissions for a fine-tuned model checkpoint.
+
+Path parameters
+fine_tuned_model_checkpoint
+string
+
+Required
+The ID of the fine-tuned model checkpoint to get permissions for.
+
+Query parameters
+after
+string
+
+Optional
+Identifier for the last permission ID from the previous pagination request.
+
+limit
+integer
+
+Optional
+Defaults to 10
+Number of permissions to retrieve.
+
+order
+string
+
+Optional
+Defaults to descending
+The order in which to retrieve permissions.
+
+project_id
+string
+
+Optional
+The ID of the project to get permissions for.
+
+Returns
+A list of fine-tuned model checkpoint permission objects for a fine-tuned model checkpoint.
+
+Example request
+curl https://api.openai.com/v1/fine_tuning/checkpoints/ft:gpt-4o-mini-2024-07-18:org:weather:B7R9VjQd/permissions \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "checkpoint.permission",
+      "id": "cp_zc4Q7MP6XxulcVzj4MZdwsAB",
+      "created_at": 1721764867,
+      "project_id": "proj_abGMw1llN8IrBb6SvvY5A1iH"
+    },
+    {
+      "object": "checkpoint.permission",
+      "id": "cp_enQCFmOTGj3syEpYVhBRLTSy",
+      "created_at": 1721764800,
+      "project_id": "proj_iqGMw1llN8IrBb6SvvY5A1oF"
+    },
+  ],
+  "first_id": "cp_zc4Q7MP6XxulcVzj4MZdwsAB",
+  "last_id": "cp_enQCFmOTGj3syEpYVhBRLTSy",
+  "has_more": false
+}
+Create checkpoint permissions
+post
+ 
+https://api.openai.com/v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions
+NOTE: Calling this endpoint requires an admin API key.
+
+This enables organization owners to share fine-tuned models with other projects in their organization.
+
+Path parameters
+fine_tuned_model_checkpoint
+string
+
+Required
+The ID of the fine-tuned model checkpoint to create a permission for.
+
+Request body
+project_ids
+array
+
+Required
+The project identifiers to grant access to.
+
+Returns
+A list of fine-tuned model checkpoint permission objects for a fine-tuned model checkpoint.
+
+Example request
+curl https://api.openai.com/v1/fine_tuning/checkpoints/ft:gpt-4o-mini-2024-07-18:org:weather:B7R9VjQd/permissions \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+  -d '{"project_ids": ["proj_abGMw1llN8IrBb6SvvY5A1iH"]}'
+Response
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "checkpoint.permission",
+      "id": "cp_zc4Q7MP6XxulcVzj4MZdwsAB",
+      "created_at": 1721764867,
+      "project_id": "proj_abGMw1llN8IrBb6SvvY5A1iH"
+    }
+  ],
+  "first_id": "cp_zc4Q7MP6XxulcVzj4MZdwsAB",
+  "last_id": "cp_zc4Q7MP6XxulcVzj4MZdwsAB",
+  "has_more": false
+}
+Delete checkpoint permission
+delete
+ 
+https://api.openai.com/v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions
+NOTE: This endpoint requires an admin API key.
+
+Organization owners can use this endpoint to delete a permission for a fine-tuned model checkpoint.
+
+Path parameters
+fine_tuned_model_checkpoint
+string
+
+Required
+The ID of the fine-tuned model checkpoint to delete a permission for.
+
+permission_id
+string
+
+Required
+The ID of the fine-tuned model checkpoint permission to delete.
+
+Returns
+The deletion status of the fine-tuned model checkpoint permission object.
+
+Example request
+curl https://api.openai.com/v1/fine_tuning/checkpoints/ft:gpt-4o-mini-2024-07-18:org:weather:B7R9VjQd/permissions/cp_zc4Q7MP6XxulcVzj4MZdwsAB \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "object": "checkpoint.permission",
+  "id": "cp_zc4Q7MP6XxulcVzj4MZdwsAB",
+  "deleted": true
+}
+Retrieve fine-tuning job
+get
+ 
+https://api.openai.com/v1/fine_tuning/jobs/{fine_tuning_job_id}
+Get info about a fine-tuning job.
+
+Learn more about fine-tuning
+
+Path parameters
+fine_tuning_job_id
+string
+
+Required
+The ID of the fine-tuning job.
+
+Returns
+The fine-tuning object with the given ID.
+
+Example request
+curl https://api.openai.com/v1/fine_tuning/jobs/ft-AF1WoRqd3aJAHsqc9NY7iL8F \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "object": "fine_tuning.job",
+  "id": "ftjob-abc123",
+  "model": "davinci-002",
+  "created_at": 1692661014,
+  "finished_at": 1692661190,
+  "fine_tuned_model": "ft:davinci-002:my-org:custom_suffix:7q8mpxmy",
+  "organization_id": "org-123",
+  "result_files": [
+      "file-abc123"
+  ],
+  "status": "succeeded",
+  "validation_file": null,
+  "training_file": "file-abc123",
+  "hyperparameters": {
+      "n_epochs": 4,
+      "batch_size": 1,
+      "learning_rate_multiplier": 1.0
+  },
+  "trained_tokens": 5768,
+  "integrations": [],
+  "seed": 0,
+  "estimated_finish": 0,
+  "method": {
+    "type": "supervised",
+    "supervised": {
+      "hyperparameters": {
+        "n_epochs": 4,
+        "batch_size": 1,
+        "learning_rate_multiplier": 1.0
+      }
+    }
+  }
+}
+Cancel fine-tuning
+post
+ 
+https://api.openai.com/v1/fine_tuning/jobs/{fine_tuning_job_id}/cancel
+Immediately cancel a fine-tune job.
+
+Path parameters
+fine_tuning_job_id
+string
+
+Required
+The ID of the fine-tuning job to cancel.
+
+Returns
+The cancelled fine-tuning object.
+
+Example request
+curl -X POST https://api.openai.com/v1/fine_tuning/jobs/ftjob-abc123/cancel \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "object": "fine_tuning.job",
+  "id": "ftjob-abc123",
+  "model": "gpt-4o-mini-2024-07-18",
+  "created_at": 1721764800,
+  "fine_tuned_model": null,
+  "organization_id": "org-123",
+  "result_files": [],
+  "status": "cancelled",
+  "validation_file": "file-abc123",
+  "training_file": "file-abc123"
+}
+Training format for chat models using the supervised method
+The per-line training example of a fine-tuning input file for chat models using the supervised method.
+
+functions
+Deprecated
+array
+
+A list of functions the model may generate JSON inputs for.
+
+
+Show properties
+messages
+array
+
+
+Show possible types
+parallel_tool_calls
+boolean
+
+Whether to enable parallel function calling during tool use.
+
+tools
+array
+
+A list of tools the model may generate JSON inputs for.
+
+
+Show properties
+OBJECT Training format for chat models using the supervised method
+{
+  "messages": [
+    { "role": "user", "content": "What is the weather in San Francisco?" },
+    {
+      "role": "assistant",
+      "tool_calls": [
+        {
+          "id": "call_id",
+          "type": "function",
+          "function": {
+            "name": "get_current_weather",
+            "arguments": "{\"location\": \"San Francisco, USA\", \"format\": \"celsius\"}"
+          }
+        }
+      ]
+    }
+  ],
+  "parallel_tool_calls": false,
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "get_current_weather",
+        "description": "Get the current weather",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {
+                "type": "string",
+                "description": "The city and country, eg. San Francisco, USA"
+            },
+            "format": { "type": "string", "enum": ["celsius", "fahrenheit"] }
+          },
+          "required": ["location", "format"]
+        }
+      }
+    }
+  ]
+}
+Training format for chat models using the preference method
+The per-line training example of a fine-tuning input file for chat models using the dpo method.
+
+input
+object
+
+
+Show properties
+non_preferred_completion
+array
+
+The non-preferred completion message for the output.
+
+
+Show possible types
+preferred_completion
+array
+
+The preferred completion message for the output.
+
+
+Show possible types
+OBJECT Training format for chat models using the preference method
+{
+  "input": {
+    "messages": [
+      { "role": "user", "content": "What is the weather in San Francisco?" }
+    ]
+  },
+  "preferred_completion": [
+    {
+      "role": "assistant",
+      "content": "The weather in San Francisco is 70 degrees Fahrenheit."
+    }
+  ],
+  "non_preferred_completion": [
+    {
+      "role": "assistant",
+      "content": "The weather in San Francisco is 21 degrees Celsius."
+    }
+  ]
+}
+Training format for completions models
+The per-line training example of a fine-tuning input file for completions models
+
+completion
+string
+
+The desired completion for this training example.
+
+prompt
+string
+
+The input prompt for this training example.
+
+OBJECT Training format for completions models
+{
+  "prompt": "What is the answer to 2+2",
+  "completion": "4"
+}
+The fine-tuning job object
+The fine_tuning.job object represents a fine-tuning job that has been created through the API.
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the fine-tuning job was created.
+
+error
+object or null
+
+For fine-tuning jobs that have failed, this will contain more information on the cause of the failure.
+
+
+Show properties
+estimated_finish
+integer or null
+
+The Unix timestamp (in seconds) for when the fine-tuning job is estimated to finish. The value will be null if the fine-tuning job is not running.
+
+fine_tuned_model
+string or null
+
+The name of the fine-tuned model that is being created. The value will be null if the fine-tuning job is still running.
+
+finished_at
+integer or null
+
+The Unix timestamp (in seconds) for when the fine-tuning job was finished. The value will be null if the fine-tuning job is still running.
+
+hyperparameters
+object
+
+The hyperparameters used for the fine-tuning job. This value will only be returned when running supervised jobs.
+
+
+Show properties
+id
+string
+
+The object identifier, which can be referenced in the API endpoints.
+
+integrations
+array or null
+
+A list of integrations to enable for this fine-tuning job.
+
+
+Show possible types
+metadata
+map
+
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+method
+object
+
+The method used for fine-tuning.
+
+
+Show properties
+model
+string
+
+The base model that is being fine-tuned.
+
+object
+string
+
+The object type, which is always "fine_tuning.job".
+
+organization_id
+string
+
+The organization that owns the fine-tuning job.
+
+result_files
+array
+
+The compiled results file ID(s) for the fine-tuning job. You can retrieve the results with the Files API.
+
+seed
+integer
+
+The seed used for the fine-tuning job.
+
+status
+string
+
+The current status of the fine-tuning job, which can be either validating_files, queued, running, succeeded, failed, or cancelled.
+
+trained_tokens
+integer or null
+
+The total number of billable tokens processed by this fine-tuning job. The value will be null if the fine-tuning job is still running.
+
+training_file
+string
+
+The file ID used for training. You can retrieve the training data with the Files API.
+
+validation_file
+string or null
+
+The file ID used for validation. You can retrieve the validation results with the Files API.
+
+OBJECT The fine-tuning job object
+{
+  "object": "fine_tuning.job",
+  "id": "ftjob-abc123",
+  "model": "davinci-002",
+  "created_at": 1692661014,
+  "finished_at": 1692661190,
+  "fine_tuned_model": "ft:davinci-002:my-org:custom_suffix:7q8mpxmy",
+  "organization_id": "org-123",
+  "result_files": [
+      "file-abc123"
+  ],
+  "status": "succeeded",
+  "validation_file": null,
+  "training_file": "file-abc123",
+  "hyperparameters": {
+      "n_epochs": 4,
+      "batch_size": 1,
+      "learning_rate_multiplier": 1.0
+  },
+  "trained_tokens": 5768,
+  "integrations": [],
+  "seed": 0,
+  "estimated_finish": 0,
+  "method": {
+    "type": "supervised",
+    "supervised": {
+      "hyperparameters": {
+        "n_epochs": 4,
+        "batch_size": 1,
+        "learning_rate_multiplier": 1.0
+      }
+    }
+  },
+  "metadata": {
+    "key": "value"
+  }
+}
+The fine-tuning job event object
+Fine-tuning job event object
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the fine-tuning job was created.
+
+data
+object
+
+The data associated with the event.
+
+id
+string
+
+The object identifier.
+
+level
+string
+
+The log level of the event.
+
+message
+string
+
+The message of the event.
+
+object
+string
+
+The object type, which is always "fine_tuning.job.event".
+
+type
+string
+
+The type of event.
+
+OBJECT The fine-tuning job event object
+{
+  "object": "fine_tuning.job.event",
+  "id": "ftevent-abc123"
+  "created_at": 1677610602,
+  "level": "info",
+  "message": "Created fine-tuning job",
+  "data": {},
+  "type": "message"
+}
+The fine-tuning job checkpoint object
+The fine_tuning.job.checkpoint object represents a model checkpoint for a fine-tuning job that is ready to use.
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the checkpoint was created.
+
+fine_tuned_model_checkpoint
+string
+
+The name of the fine-tuned checkpoint model that is created.
+
+fine_tuning_job_id
+string
+
+The name of the fine-tuning job that this checkpoint was created from.
+
+id
+string
+
+The checkpoint identifier, which can be referenced in the API endpoints.
+
+metrics
+object
+
+Metrics at the step number during the fine-tuning job.
+
+
+Show properties
+object
+string
+
+The object type, which is always "fine_tuning.job.checkpoint".
+
+step_number
+integer
+
+The step number that the checkpoint was created at.
+
+OBJECT The fine-tuning job checkpoint object
+{
+  "object": "fine_tuning.job.checkpoint",
+  "id": "ftckpt_qtZ5Gyk4BLq1SfLFWp3RtO3P",
+  "created_at": 1712211699,
+  "fine_tuned_model_checkpoint": "ft:gpt-4o-mini-2024-07-18:my-org:custom_suffix:9ABel2dg:ckpt-step-88",
+  "fine_tuning_job_id": "ftjob-fpbNQ3H1GrMehXRf8cO97xTN",
+  "metrics": {
+    "step": 88,
+    "train_loss": 0.478,
+    "train_mean_token_accuracy": 0.924,
+    "valid_loss": 10.112,
+    "valid_mean_token_accuracy": 0.145,
+    "full_valid_loss": 0.567,
+    "full_valid_mean_token_accuracy": 0.944
+  },
+  "step_number": 88
+}
+The fine-tuned model checkpoint permission object
+The checkpoint.permission object represents a permission for a fine-tuned model checkpoint.
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the permission was created.
+
+id
+string
+
+The permission identifier, which can be referenced in the API endpoints.
+
+object
+string
+
+The object type, which is always "checkpoint.permission".
+
+project_id
+string
+
+The project identifier that the permission is for.
+
+OBJECT The fine-tuned model checkpoint permission object
+{
+  "object": "checkpoint.permission",
+  "id": "cp_zc4Q7MP6XxulcVzj4MZdwsAB",
+  "created_at": 1712211699,
+  "project_id": "proj_abGMw1llN8IrBb6SvvY5A1iH"
+}
+Batch
+Create large batches of API requests for asynchronous processing. The Batch API returns completions within 24 hours for a 50% discount. Related guide: Batch
+
+Create batch
+post
+ 
+https://api.openai.com/v1/batches
+Creates and executes a batch from an uploaded file of requests
+
+Request body
+completion_window
+string
+
+Required
+The time frame within which the batch should be processed. Currently only 24h is supported.
+
+endpoint
+string
+
+Required
+The endpoint to be used for all requests in the batch. Currently /v1/responses, /v1/chat/completions, /v1/embeddings, and /v1/completions are supported. Note that /v1/embeddings batches are also restricted to a maximum of 50,000 embedding inputs across all requests in the batch.
+
+input_file_id
+string
+
+Required
+The ID of an uploaded file that contains requests for the new batch.
+
+See upload file for how to upload a file.
+
+Your input file must be formatted as a JSONL file, and must be uploaded with the purpose batch. The file can contain up to 50,000 requests, and can be up to 200 MB in size.
+
+metadata
+map
+
+Optional
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+Returns
+The created Batch object.
+
+Example request
+curl https://api.openai.com/v1/batches \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input_file_id": "file-abc123",
+    "endpoint": "/v1/chat/completions",
+    "completion_window": "24h"
+  }'
+Response
+{
+  "id": "batch_abc123",
+  "object": "batch",
+  "endpoint": "/v1/chat/completions",
+  "errors": null,
+  "input_file_id": "file-abc123",
+  "completion_window": "24h",
+  "status": "validating",
+  "output_file_id": null,
+  "error_file_id": null,
+  "created_at": 1711471533,
+  "in_progress_at": null,
+  "expires_at": null,
+  "finalizing_at": null,
+  "completed_at": null,
+  "failed_at": null,
+  "expired_at": null,
+  "cancelling_at": null,
+  "cancelled_at": null,
+  "request_counts": {
+    "total": 0,
+    "completed": 0,
+    "failed": 0
+  },
+  "metadata": {
+    "customer_id": "user_123456789",
+    "batch_description": "Nightly eval job",
+  }
+}
+Retrieve batch
+get
+ 
+https://api.openai.com/v1/batches/{batch_id}
+Retrieves a batch.
+
+Path parameters
+batch_id
+string
+
+Required
+The ID of the batch to retrieve.
+
+Returns
+The Batch object matching the specified ID.
+
+Example request
+curl https://api.openai.com/v1/batches/batch_abc123 \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+Response
+{
+  "id": "batch_abc123",
+  "object": "batch",
+  "endpoint": "/v1/completions",
+  "errors": null,
+  "input_file_id": "file-abc123",
+  "completion_window": "24h",
+  "status": "completed",
+  "output_file_id": "file-cvaTdG",
+  "error_file_id": "file-HOWS94",
+  "created_at": 1711471533,
+  "in_progress_at": 1711471538,
+  "expires_at": 1711557933,
+  "finalizing_at": 1711493133,
+  "completed_at": 1711493163,
+  "failed_at": null,
+  "expired_at": null,
+  "cancelling_at": null,
+  "cancelled_at": null,
+  "request_counts": {
+    "total": 100,
+    "completed": 95,
+    "failed": 5
+  },
+  "metadata": {
+    "customer_id": "user_123456789",
+    "batch_description": "Nightly eval job",
+  }
+}
+Cancel batch
+post
+ 
+https://api.openai.com/v1/batches/{batch_id}/cancel
+Cancels an in-progress batch. The batch will be in status cancelling for up to 10 minutes, before changing to cancelled, where it will have partial results (if any) available in the output file.
+
+Path parameters
+batch_id
+string
+
+Required
+The ID of the batch to cancel.
+
+Returns
+The Batch object matching the specified ID.
+
+Example request
+curl https://api.openai.com/v1/batches/batch_abc123/cancel \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -X POST
+Response
+{
+  "id": "batch_abc123",
+  "object": "batch",
+  "endpoint": "/v1/chat/completions",
+  "errors": null,
+  "input_file_id": "file-abc123",
+  "completion_window": "24h",
+  "status": "cancelling",
+  "output_file_id": null,
+  "error_file_id": null,
+  "created_at": 1711471533,
+  "in_progress_at": 1711471538,
+  "expires_at": 1711557933,
+  "finalizing_at": null,
+  "completed_at": null,
+  "failed_at": null,
+  "expired_at": null,
+  "cancelling_at": 1711475133,
+  "cancelled_at": null,
+  "request_counts": {
+    "total": 100,
+    "completed": 23,
+    "failed": 1
+  },
+  "metadata": {
+    "customer_id": "user_123456789",
+    "batch_description": "Nightly eval job",
+  }
+}
+List batch
+get
+ 
+https://api.openai.com/v1/batches
+List your organization's batches.
+
+Query parameters
+after
+string
+
+Optional
+A cursor for use in pagination. after is an object ID that defines your place in the list. For instance, if you make a list request and receive 100 objects, ending with obj_foo, your subsequent call can include after=obj_foo in order to fetch the next page of the list.
+
+limit
+integer
+
+Optional
+Defaults to 20
+A limit on the number of objects to be returned. Limit can range between 1 and 100, and the default is 20.
+
+Returns
+A list of paginated Batch objects.
+
+Example request
+curl https://api.openai.com/v1/batches?limit=2 \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json"
+Response
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "batch_abc123",
+      "object": "batch",
+      "endpoint": "/v1/chat/completions",
+      "errors": null,
+      "input_file_id": "file-abc123",
+      "completion_window": "24h",
+      "status": "completed",
+      "output_file_id": "file-cvaTdG",
+      "error_file_id": "file-HOWS94",
+      "created_at": 1711471533,
+      "in_progress_at": 1711471538,
+      "expires_at": 1711557933,
+      "finalizing_at": 1711493133,
+      "completed_at": 1711493163,
+      "failed_at": null,
+      "expired_at": null,
+      "cancelling_at": null,
+      "cancelled_at": null,
+      "request_counts": {
+        "total": 100,
+        "completed": 95,
+        "failed": 5
+      },
+      "metadata": {
+        "customer_id": "user_123456789",
+        "batch_description": "Nightly job",
+      }
+    },
+    { ... },
+  ],
+  "first_id": "batch_abc123",
+  "last_id": "batch_abc456",
+  "has_more": true
+}
+The batch object
+cancelled_at
+integer
+
+The Unix timestamp (in seconds) for when the batch was cancelled.
+
+cancelling_at
+integer
+
+The Unix timestamp (in seconds) for when the batch started cancelling.
+
+completed_at
+integer
+
+The Unix timestamp (in seconds) for when the batch was completed.
+
+completion_window
+string
+
+The time frame within which the batch should be processed.
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the batch was created.
+
+endpoint
+string
+
+The OpenAI API endpoint used by the batch.
+
+error_file_id
+string
+
+The ID of the file containing the outputs of requests with errors.
+
+errors
+object
+
+
+Show properties
+expired_at
+integer
+
+The Unix timestamp (in seconds) for when the batch expired.
+
+expires_at
+integer
+
+The Unix timestamp (in seconds) for when the batch will expire.
+
+failed_at
+integer
+
+The Unix timestamp (in seconds) for when the batch failed.
+
+finalizing_at
+integer
+
+The Unix timestamp (in seconds) for when the batch started finalizing.
+
+id
+string
+
+in_progress_at
+integer
+
+The Unix timestamp (in seconds) for when the batch started processing.
+
+input_file_id
+string
+
+The ID of the input file for the batch.
+
+metadata
+map
+
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+object
+string
+
+The object type, which is always batch.
+
+output_file_id
+string
+
+The ID of the file containing the outputs of successfully executed requests.
+
+request_counts
+object
+
+The request counts for different statuses within the batch.
+
+
+Show properties
+status
+string
+
+The current status of the batch.
+
+OBJECT The batch object
+{
+  "id": "batch_abc123",
+  "object": "batch",
+  "endpoint": "/v1/completions",
+  "errors": null,
+  "input_file_id": "file-abc123",
+  "completion_window": "24h",
+  "status": "completed",
+  "output_file_id": "file-cvaTdG",
+  "error_file_id": "file-HOWS94",
+  "created_at": 1711471533,
+  "in_progress_at": 1711471538,
+  "expires_at": 1711557933,
+  "finalizing_at": 1711493133,
+  "completed_at": 1711493163,
+  "failed_at": null,
+  "expired_at": null,
+  "cancelling_at": null,
+  "cancelled_at": null,
+  "request_counts": {
+    "total": 100,
+    "completed": 95,
+    "failed": 5
+  },
+  "metadata": {
+    "customer_id": "user_123456789",
+    "batch_description": "Nightly eval job",
+  }
+}
+The request input object
+The per-line object of the batch input file
+
+custom_id
+string
+
+A developer-provided per-request id that will be used to match outputs to inputs. Must be unique for each request in a batch.
+
+method
+string
+
+The HTTP method to be used for the request. Currently only POST is supported.
+
+url
+string
+
+The OpenAI API relative URL to be used for the request. Currently /v1/chat/completions, /v1/embeddings, and /v1/completions are supported.
+
+OBJECT The request input object
+{"custom_id": "request-1", "method": "POST", "url": "/v1/chat/completions", "body": {"model": "gpt-4o-mini", "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What is 2+2?"}]}}
+The request output object
+The per-line object of the batch output and error files
+
+custom_id
+string
+
+A developer-provided per-request id that will be used to match outputs to inputs.
+
+error
+object or null
+
+For requests that failed with a non-HTTP error, this will contain more information on the cause of the failure.
+
+
+Show properties
+id
+string
+
+response
+object or null
+
+
+Show properties
+OBJECT The request output object
+{"id": "batch_req_wnaDys", "custom_id": "request-2", "response": {"status_code": 200, "request_id": "req_c187b3", "body": {"id": "chatcmpl-9758Iw", "object": "chat.completion", "created": 1711475054, "model": "gpt-4o-mini", "choices": [{"index": 0, "message": {"role": "assistant", "content": "2 + 2 equals 4."}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 24, "completion_tokens": 15, "total_tokens": 39}, "system_fingerprint": null}}, "error": null}
+Files
+Files are used to upload documents that can be used with features like Assistants, Fine-tuning, and Batch API.
+
+Upload file
+post
+ 
+https://api.openai.com/v1/files
+Upload a file that can be used across various endpoints. Individual files can be up to 512 MB, and the size of all files uploaded by one organization can be up to 100 GB.
+
+The Assistants API supports files up to 2 million tokens and of specific file types. See the Assistants Tools guide for details.
+
+The Fine-tuning API only supports .jsonl files. The input also has certain required formats for fine-tuning chat or completions models.
+
+The Batch API only supports .jsonl files up to 200 MB in size. The input also has a specific required format.
+
+Please contact us if you need to increase these storage limits.
+
+Request body
+file
+file
+
+Required
+The File object (not file name) to be uploaded.
+
+purpose
+string
+
+Required
+The intended purpose of the uploaded file. One of: - assistants: Used in the Assistants API - batch: Used in the Batch API - fine-tune: Used for fine-tuning - vision: Images used for vision fine-tuning - user_data: Flexible file type for any purpose - evals: Used for eval data sets
+
+Returns
+The uploaded File object.
+
+Example request
+curl https://api.openai.com/v1/files \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -F purpose="fine-tune" \
+  -F file="@mydata.jsonl"
+Response
+{
+  "id": "file-abc123",
+  "object": "file",
+  "bytes": 120000,
+  "created_at": 1677610602,
+  "filename": "mydata.jsonl",
+  "purpose": "fine-tune",
+}
+List files
+get
+ 
+https://api.openai.com/v1/files
+Returns a list of files.
+
+Query parameters
+after
+string
+
+Optional
+A cursor for use in pagination. after is an object ID that defines your place in the list. For instance, if you make a list request and receive 100 objects, ending with obj_foo, your subsequent call can include after=obj_foo in order to fetch the next page of the list.
+
+limit
+integer
+
+Optional
+Defaults to 10000
+A limit on the number of objects to be returned. Limit can range between 1 and 10,000, and the default is 10,000.
+
+order
+string
+
+Optional
+Defaults to desc
+Sort order by the created_at timestamp of the objects. asc for ascending order and desc for descending order.
+
+purpose
+string
+
+Optional
+Only return files with the given purpose.
+
+Returns
+A list of File objects.
+
+Example request
+curl https://api.openai.com/v1/files \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "data": [
+    {
+      "id": "file-abc123",
+      "object": "file",
+      "bytes": 175,
+      "created_at": 1613677385,
+      "filename": "salesOverview.pdf",
+      "purpose": "assistants",
+    },
+    {
+      "id": "file-abc123",
+      "object": "file",
+      "bytes": 140,
+      "created_at": 1613779121,
+      "filename": "puppy.jsonl",
+      "purpose": "fine-tune",
+    }
+  ],
+  "object": "list"
+}
+Retrieve file
+get
+ 
+https://api.openai.com/v1/files/{file_id}
+Returns information about a specific file.
+
+Path parameters
+file_id
+string
+
+Required
+The ID of the file to use for this request.
+
+Returns
+The File object matching the specified ID.
+
+Example request
+curl https://api.openai.com/v1/files/file-abc123 \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "id": "file-abc123",
+  "object": "file",
+  "bytes": 120000,
+  "created_at": 1677610602,
+  "filename": "mydata.jsonl",
+  "purpose": "fine-tune",
+}
+Delete file
+delete
+ 
+https://api.openai.com/v1/files/{file_id}
+Delete a file.
+
+Path parameters
+file_id
+string
+
+Required
+The ID of the file to use for this request.
+
+Returns
+Deletion status.
+
+Example request
+curl https://api.openai.com/v1/files/file-abc123 \
+  -X DELETE \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "id": "file-abc123",
+  "object": "file",
+  "deleted": true
+}
+Retrieve file content
+get
+ 
+https://api.openai.com/v1/files/{file_id}/content
+Returns the contents of the specified file.
+
+Path parameters
+file_id
+string
+
+Required
+The ID of the file to use for this request.
+
+Returns
+The file content.
+
+Example request
+curl https://api.openai.com/v1/files/file-abc123/content \
+  -H "Authorization: Bearer $OPENAI_API_KEY" > file.jsonl
+The file object
+The File object represents a document that has been uploaded to OpenAI.
+
+bytes
+integer
+
+The size of the file, in bytes.
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the file was created.
+
+expires_at
+integer
+
+The Unix timestamp (in seconds) for when the file will expire.
+
+filename
+string
+
+The name of the file.
+
+id
+string
+
+The file identifier, which can be referenced in the API endpoints.
+
+object
+string
+
+The object type, which is always file.
+
+purpose
+string
+
+The intended purpose of the file. Supported values are assistants, assistants_output, batch, batch_output, fine-tune, fine-tune-results and vision.
+
+status
+Deprecated
+string
+
+Deprecated. The current status of the file, which can be either uploaded, processed, or error.
+
+status_details
+Deprecated
+string
+
+Deprecated. For details on why a fine-tuning training file failed validation, see the error field on fine_tuning.job.
+
+OBJECT The file object
+{
+  "id": "file-abc123",
+  "object": "file",
+  "bytes": 120000,
+  "created_at": 1677610602,
+  "expires_at": 1680202602,
+  "filename": "salesOverview.pdf",
+  "purpose": "assistants",
+}
+Uploads
+Allows you to upload large files in multiple parts.
+
+Create upload
+post
+ 
+https://api.openai.com/v1/uploads
+Creates an intermediate Upload object that you can add Parts to. Currently, an Upload can accept at most 8 GB in total and expires after an hour after you create it.
+
+Once you complete the Upload, we will create a File object that contains all the parts you uploaded. This File is usable in the rest of our platform as a regular File object.
+
+For certain purpose values, the correct mime_type must be specified. Please refer to documentation for the supported MIME types for your use case.
+
+For guidance on the proper filename extensions for each purpose, please follow the documentation on creating a File.
+
+Request body
+bytes
+integer
+
+Required
+The number of bytes in the file you are uploading.
+
+filename
+string
+
+Required
+The name of the file to upload.
+
+mime_type
+string
+
+Required
+The MIME type of the file.
+
+This must fall within the supported MIME types for your file purpose. See the supported MIME types for assistants and vision.
+
+purpose
+string
+
+Required
+The intended purpose of the uploaded file.
+
+See the documentation on File purposes.
+
+Returns
+The Upload object with status pending.
+
+Example request
+curl https://api.openai.com/v1/uploads \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "purpose": "fine-tune",
+    "filename": "training_examples.jsonl",
+    "bytes": 2147483648,
+    "mime_type": "text/jsonl"
+  }'
+Response
+{
+  "id": "upload_abc123",
+  "object": "upload",
+  "bytes": 2147483648,
+  "created_at": 1719184911,
+  "filename": "training_examples.jsonl",
+  "purpose": "fine-tune",
+  "status": "pending",
+  "expires_at": 1719127296
+}
+Add upload part
+post
+ 
+https://api.openai.com/v1/uploads/{upload_id}/parts
+Adds a Part to an Upload object. A Part represents a chunk of bytes from the file you are trying to upload.
+
+Each Part can be at most 64 MB, and you can add Parts until you hit the Upload maximum of 8 GB.
+
+It is possible to add multiple Parts in parallel. You can decide the intended order of the Parts when you complete the Upload.
+
+Path parameters
+upload_id
+string
+
+Required
+The ID of the Upload.
+
+Request body
+data
+file
+
+Required
+The chunk of bytes for this Part.
+
+Returns
+The upload Part object.
+
+Example request
+curl https://api.openai.com/v1/uploads/upload_abc123/parts
+  -F data="aHR0cHM6Ly9hcGkub3BlbmFpLmNvbS92MS91cGxvYWRz..."
+Response
+{
+  "id": "part_def456",
+  "object": "upload.part",
+  "created_at": 1719185911,
+  "upload_id": "upload_abc123"
+}
+Complete upload
+post
+ 
+https://api.openai.com/v1/uploads/{upload_id}/complete
+Completes the Upload.
+
+Within the returned Upload object, there is a nested File object that is ready to use in the rest of the platform.
+
+You can specify the order of the Parts by passing in an ordered list of the Part IDs.
+
+The number of bytes uploaded upon completion must match the number of bytes initially specified when creating the Upload object. No Parts may be added after an Upload is completed.
+
+Path parameters
+upload_id
+string
+
+Required
+The ID of the Upload.
+
+Request body
+part_ids
+array
+
+Required
+The ordered list of Part IDs.
+
+md5
+string
+
+Optional
+The optional md5 checksum for the file contents to verify if the bytes uploaded matches what you expect.
+
+Returns
+The Upload object with status completed with an additional file property containing the created usable File object.
+
+Example request
+curl https://api.openai.com/v1/uploads/upload_abc123/complete
+  -d '{
+    "part_ids": ["part_def456", "part_ghi789"]
+  }'
+Response
+{
+  "id": "upload_abc123",
+  "object": "upload",
+  "bytes": 2147483648,
+  "created_at": 1719184911,
+  "filename": "training_examples.jsonl",
+  "purpose": "fine-tune",
+  "status": "completed",
+  "expires_at": 1719127296,
+  "file": {
+    "id": "file-xyz321",
+    "object": "file",
+    "bytes": 2147483648,
+    "created_at": 1719186911,
+    "filename": "training_examples.jsonl",
+    "purpose": "fine-tune",
+  }
+}
+Cancel upload
+post
+ 
+https://api.openai.com/v1/uploads/{upload_id}/cancel
+Cancels the Upload. No Parts may be added after an Upload is cancelled.
+
+Path parameters
+upload_id
+string
+
+Required
+The ID of the Upload.
+
+Returns
+The Upload object with status cancelled.
+
+Example request
+curl https://api.openai.com/v1/uploads/upload_abc123/cancel
+Response
+{
+  "id": "upload_abc123",
+  "object": "upload",
+  "bytes": 2147483648,
+  "created_at": 1719184911,
+  "filename": "training_examples.jsonl",
+  "purpose": "fine-tune",
+  "status": "cancelled",
+  "expires_at": 1719127296
+}
+The upload object
+The Upload object can accept byte chunks in the form of Parts.
+
+bytes
+integer
+
+The intended number of bytes to be uploaded.
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the Upload was created.
+
+expires_at
+integer
+
+The Unix timestamp (in seconds) for when the Upload will expire.
+
+file
+undefined or null
+
+The ready File object after the Upload is completed.
+
+filename
+string
+
+The name of the file to be uploaded.
+
+id
+string
+
+The Upload unique identifier, which can be referenced in API endpoints.
+
+object
+string
+
+The object type, which is always "upload".
+
+purpose
+string
+
+The intended purpose of the file. Please refer here for acceptable values.
+
+status
+string
+
+The status of the Upload.
+
+OBJECT The upload object
+{
+  "id": "upload_abc123",
+  "object": "upload",
+  "bytes": 2147483648,
+  "created_at": 1719184911,
+  "filename": "training_examples.jsonl",
+  "purpose": "fine-tune",
+  "status": "completed",
+  "expires_at": 1719127296,
+  "file": {
+    "id": "file-xyz321",
+    "object": "file",
+    "bytes": 2147483648,
+    "created_at": 1719186911,
+    "filename": "training_examples.jsonl",
+    "purpose": "fine-tune",
+  }
+}
+The upload part object
+The upload Part represents a chunk of bytes we can add to an Upload object.
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the Part was created.
+
+id
+string
+
+The upload Part unique identifier, which can be referenced in API endpoints.
+
+object
+string
+
+The object type, which is always upload.part.
+
+upload_id
+string
+
+The ID of the Upload object that this Part was added to.
+
+OBJECT The upload part object
+{
+    "id": "part_def456",
+    "object": "upload.part",
+    "created_at": 1719186911,
+    "upload_id": "upload_abc123"
+}
+Images
+Given a prompt and/or an input image, the model will generate a new image. Related guide: Image generation
+
+Create image
+post
+ 
+https://api.openai.com/v1/images/generations
+Creates an image given a prompt.
+
+Request body
+prompt
+string
+
+Required
+A text description of the desired image(s). The maximum length is 1000 characters for dall-e-2 and 4000 characters for dall-e-3.
+
+model
+string
+
+Optional
+Defaults to dall-e-2
+The model to use for image generation.
+
+n
+integer or null
+
+Optional
+Defaults to 1
+The number of images to generate. Must be between 1 and 10. For dall-e-3, only n=1 is supported.
+
+quality
+string
+
+Optional
+Defaults to standard
+The quality of the image that will be generated. hd creates images with finer details and greater consistency across the image. This param is only supported for dall-e-3.
+
+response_format
+string or null
+
+Optional
+Defaults to url
+The format in which the generated images are returned. Must be one of url or b64_json. URLs are only valid for 60 minutes after the image has been generated.
+
+size
+string or null
+
+Optional
+Defaults to 1024x1024
+The size of the generated images. Must be one of 256x256, 512x512, or 1024x1024 for dall-e-2. Must be one of 1024x1024, 1792x1024, or 1024x1792 for dall-e-3 models.
+
+style
+string or null
+
+Optional
+Defaults to vivid
+The style of the generated images. Must be one of vivid or natural. Vivid causes the model to lean towards generating hyper-real and dramatic images. Natural causes the model to produce more natural, less hyper-real looking images. This param is only supported for dall-e-3.
+
+user
+string
+
+Optional
+A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse. Learn more.
+
+Returns
+Returns a list of image objects.
+
+Example request
+curl https://api.openai.com/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "model": "dall-e-3",
+    "prompt": "A cute baby sea otter",
+    "n": 1,
+    "size": "1024x1024"
+  }'
+Response
+{
+  "created": 1589478378,
+  "data": [
+    {
+      "url": "https://..."
+    },
+    {
+      "url": "https://..."
+    }
+  ]
+}
+Create image edit
+post
+ 
+https://api.openai.com/v1/images/edits
+Creates an edited or extended image given an original image and a prompt.
+
+Request body
+image
+file
+
+Required
+The image to edit. Must be a valid PNG file, less than 4MB, and square. If mask is not provided, image must have transparency, which will be used as the mask.
+
+prompt
+string
+
+Required
+A text description of the desired image(s). The maximum length is 1000 characters.
+
+mask
+file
+
+Optional
+An additional image whose fully transparent areas (e.g. where alpha is zero) indicate where image should be edited. Must be a valid PNG file, less than 4MB, and have the same dimensions as image.
+
+model
+string or "dall-e-2"
+
+Optional
+Defaults to dall-e-2
+The model to use for image generation. Only dall-e-2 is supported at this time.
+
+n
+integer or null
+
+Optional
+Defaults to 1
+The number of images to generate. Must be between 1 and 10.
+
+response_format
+string or null
+
+Optional
+Defaults to url
+The format in which the generated images are returned. Must be one of url or b64_json. URLs are only valid for 60 minutes after the image has been generated.
+
+size
+string or null
+
+Optional
+Defaults to 1024x1024
+The size of the generated images. Must be one of 256x256, 512x512, or 1024x1024.
+
+user
+string
+
+Optional
+A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse. Learn more.
+
+Returns
+Returns a list of image objects.
+
+Example request
+curl https://api.openai.com/v1/images/edits \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -F image="@otter.png" \
+  -F mask="@mask.png" \
+  -F prompt="A cute baby sea otter wearing a beret" \
+  -F n=2 \
+  -F size="1024x1024"
+Response
+{
+  "created": 1589478378,
+  "data": [
+    {
+      "url": "https://..."
+    },
+    {
+      "url": "https://..."
+    }
+  ]
+}
+Create image variation
+post
+ 
+https://api.openai.com/v1/images/variations
+Creates a variation of a given image.
+
+Request body
+image
+file
+
+Required
+The image to use as the basis for the variation(s). Must be a valid PNG file, less than 4MB, and square.
+
+model
+string or "dall-e-2"
+
+Optional
+Defaults to dall-e-2
+The model to use for image generation. Only dall-e-2 is supported at this time.
+
+n
+integer or null
+
+Optional
+Defaults to 1
+The number of images to generate. Must be between 1 and 10. For dall-e-3, only n=1 is supported.
+
+response_format
+string or null
+
+Optional
+Defaults to url
+The format in which the generated images are returned. Must be one of url or b64_json. URLs are only valid for 60 minutes after the image has been generated.
+
+size
+string or null
+
+Optional
+Defaults to 1024x1024
+The size of the generated images. Must be one of 256x256, 512x512, or 1024x1024.
+
+user
+string
+
+Optional
+A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse. Learn more.
+
+Returns
+Returns a list of image objects.
+
+Example request
+curl https://api.openai.com/v1/images/variations \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -F image="@otter.png" \
+  -F n=2 \
+  -F size="1024x1024"
+Response
+{
+  "created": 1589478378,
+  "data": [
+    {
+      "url": "https://..."
+    },
+    {
+      "url": "https://..."
+    }
+  ]
+}
+The image object
+Represents the url or the content of an image generated by the OpenAI API.
+
+b64_json
+string
+
+The base64-encoded JSON of the generated image, if response_format is b64_json.
+
+revised_prompt
+string
+
+The prompt that was used to generate the image, if there was any revision to the prompt.
+
+url
+string
+
+The URL of the generated image, if response_format is url (default).
+
+OBJECT The image object
+{
+  "url": "...",
+  "revised_prompt": "..."
+}
+Models
+List and describe the various models available in the API. You can refer to the Models documentation to understand what models are available and the differences between them.
+
+List models
+get
+ 
+https://api.openai.com/v1/models
+Lists the currently available models, and provides basic information about each one such as the owner and availability.
+
+Returns
+A list of model objects.
+
+Example request
+curl https://api.openai.com/v1/models \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "model-id-0",
+      "object": "model",
+      "created": 1686935002,
+      "owned_by": "organization-owner"
+    },
+    {
+      "id": "model-id-1",
+      "object": "model",
+      "created": 1686935002,
+      "owned_by": "organization-owner",
+    },
+    {
+      "id": "model-id-2",
+      "object": "model",
+      "created": 1686935002,
+      "owned_by": "openai"
+    },
+  ],
+  "object": "list"
+}
+Retrieve model
+get
+ 
+https://api.openai.com/v1/models/{model}
+Retrieves a model instance, providing basic information about the model such as the owner and permissioning.
+
+Path parameters
+model
+string
+
+Required
+The ID of the model to use for this request
+
+Returns
+The model object matching the specified ID.
+
+Example request
+curl https://api.openai.com/v1/models/gpt-4o \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "id": "gpt-4o",
+  "object": "model",
+  "created": 1686935002,
+  "owned_by": "openai"
+}
+Delete a fine-tuned model
+delete
+ 
+https://api.openai.com/v1/models/{model}
+Delete a fine-tuned model. You must have the Owner role in your organization to delete a model.
+
+Path parameters
+model
+string
+
+Required
+The model to delete
+
+Returns
+Deletion status.
+
+Example request
+curl https://api.openai.com/v1/models/ft:gpt-4o-mini:acemeco:suffix:abc123 \
+  -X DELETE \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+Response
+{
+  "id": "ft:gpt-4o-mini:acemeco:suffix:abc123",
+  "object": "model",
+  "deleted": true
+}
+The model object
+Describes an OpenAI model offering that can be used with the API.
+
+created
+integer
+
+The Unix timestamp (in seconds) when the model was created.
+
+id
+string
+
+The model identifier, which can be referenced in the API endpoints.
+
+object
+string
+
+The object type, which is always "model".
+
+owned_by
+string
+
+The organization that owns the model.
+
+OBJECT The model object
+{
+  "id": "gpt-4o",
+  "object": "model",
+  "created": 1686935002,
+  "owned_by": "openai"
+}
+Moderations
+Given text and/or image inputs, classifies if those inputs are potentially harmful across several categories. Related guide: Moderations
+
+Create moderation
+post
+ 
+https://api.openai.com/v1/moderations
+Classifies if text and/or image inputs are potentially harmful. Learn more in the moderation guide.
+
+Request body
+input
+string or array
+
+Required
+Input (or inputs) to classify. Can be a single string, an array of strings, or an array of multi-modal input objects similar to other models.
+
+
+Show possible types
+model
+string
+
+Optional
+Defaults to omni-moderation-latest
+The content moderation model you would like to use. Learn more in the moderation guide, and learn about available models here.
+
+Returns
+A moderation object.
+
+
+Single string
+
+Image and text
+Example request
+curl https://api.openai.com/v1/moderations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "input": "I want to kill them."
+  }'
+Response
+{
+  "id": "modr-AB8CjOTu2jiq12hp1AQPfeqFWaORR",
+  "model": "text-moderation-007",
+  "results": [
+    {
+      "flagged": true,
+      "categories": {
+        "sexual": false,
+        "hate": false,
+        "harassment": true,
+        "self-harm": false,
+        "sexual/minors": false,
+        "hate/threatening": false,
+        "violence/graphic": false,
+        "self-harm/intent": false,
+        "self-harm/instructions": false,
+        "harassment/threatening": true,
+        "violence": true
+      },
+      "category_scores": {
+        "sexual": 0.000011726012417057063,
+        "hate": 0.22706663608551025,
+        "harassment": 0.5215635299682617,
+        "self-harm": 2.227119921371923e-6,
+        "sexual/minors": 7.107352217872176e-8,
+        "hate/threatening": 0.023547329008579254,
+        "violence/graphic": 0.00003391829886822961,
+        "self-harm/intent": 1.646940972932498e-6,
+        "self-harm/instructions": 1.1198755256458526e-9,
+        "harassment/threatening": 0.5694745779037476,
+        "violence": 0.9971134662628174
+      }
+    }
+  ]
+}
+The moderation object
+Represents if a given text input is potentially harmful.
+
+id
+string
+
+The unique identifier for the moderation request.
+
+model
+string
+
+The model used to generate the moderation results.
+
+results
+array
+
+A list of moderation objects.
+
+
+Show properties
+OBJECT The moderation object
+{
+  "id": "modr-0d9740456c391e43c445bf0f010940c7",
+  "model": "omni-moderation-latest",
+  "results": [
+    {
+      "flagged": true,
+      "categories": {
+        "harassment": true,
+        "harassment/threatening": true,
+        "sexual": false,
+        "hate": false,
+        "hate/threatening": false,
+        "illicit": false,
+        "illicit/violent": false,
+        "self-harm/intent": false,
+        "self-harm/instructions": false,
+        "self-harm": false,
+        "sexual/minors": false,
+        "violence": true,
+        "violence/graphic": true
+      },
+      "category_scores": {
+        "harassment": 0.8189693396524255,
+        "harassment/threatening": 0.804985420696006,
+        "sexual": 1.573112165348997e-6,
+        "hate": 0.007562942636942845,
+        "hate/threatening": 0.004208854591835476,
+        "illicit": 0.030535955153511665,
+        "illicit/violent": 0.008925306722380033,
+        "self-harm/intent": 0.00023023930975076432,
+        "self-harm/instructions": 0.0002293869201073356,
+        "self-harm": 0.012598046106750154,
+        "sexual/minors": 2.212566909570261e-8,
+        "violence": 0.9999992735124786,
+        "violence/graphic": 0.843064871157054
+      },
+      "category_applied_input_types": {
+        "harassment": [
+          "text"
+        ],
+        "harassment/threatening": [
+          "text"
+        ],
+        "sexual": [
+          "text",
+          "image"
+        ],
+        "hate": [
+          "text"
+        ],
+        "hate/threatening": [
+          "text"
+        ],
+        "illicit": [
+          "text"
+        ],
+        "illicit/violent": [
+          "text"
+        ],
+        "self-harm/intent": [
+          "text",
+          "image"
+        ],
+        "self-harm/instructions": [
+          "text",
+          "image"
+        ],
+        "self-harm": [
+          "text",
+          "image"
+        ],
+        "sexual/minors": [
+          "text"
+        ],
+        "violence": [
+          "text",
+          "image"
+        ],
+        "violence/graphic": [
+          "text",
+          "image"
+        ]
+      }
+    }
+  ]
+}

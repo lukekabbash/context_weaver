@@ -2,15 +2,53 @@ let highlightedText = '';
 let openaiApiKey = '';
 let deepseekApiKey = '';
 let grokApiKey = '';
+let geminiApiKey = '';
 let availableModels = [];
 let activeConnections = new Map();
 
+// Create context menu item
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.contextMenus.create({
+        id: 'weaveHighlightedText',
+        title: 'Weave with Context Weaver',
+        contexts: ['selection']
+    });
+});
+
+// Handle context menu click
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId === 'weaveHighlightedText') {
+        // Store the selected text
+        highlightedText = info.selectionText;
+        
+        // Get the current window to position the popup relative to it
+        chrome.windows.getCurrent((currentWindow) => {
+            // Calculate position - center the popup in the current window
+            const width = 600;
+            const height = 800;
+            const left = Math.round(currentWindow.left + (currentWindow.width - width) / 2);
+            const top = Math.round(currentWindow.top + (currentWindow.height - height) / 2);
+            
+            // Open the popup with calculated position and autoWeave parameter
+            chrome.windows.create({
+                url: chrome.runtime.getURL('popup/popup.html?autoWeave=true&windowType=rightClick'),
+                type: 'popup',
+                width: width,
+                height: height,
+                left: left,
+                top: top
+            });
+        });
+    }
+});
+
 // Function to load API keys from storage and generate available model list
 function loadApiKeysAndGenerateModelList() {
-    chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey'], (result) => {
+    chrome.storage.sync.get(['openaiApiKey', 'deepseekApiKey', 'grokApiKey', 'geminiApiKey'], (result) => {
         openaiApiKey = result.openaiApiKey || '';
         deepseekApiKey = result.deepseekApiKey || '';
         grokApiKey = result.grokApiKey || '';
+        geminiApiKey = result.geminiApiKey || '';
 
         console.log("API Keys loaded from storage.");
 
@@ -38,7 +76,10 @@ function generateModelList() {
         models.push({ value: 'deepseek-chat', name: 'V3 Chat (DeepSeek)' });
         models.push({ value: 'deepseek-reasoner', name: 'R1 Reasoner (DeepSeek)' });
     }
-    // REMOVED: Gemini models are no longer added
+    if (geminiApiKey) {
+        models.push({ value: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Google)' });
+        models.push({ value: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash-Lite (Google)' });
+    }
     return models;
 }
 
@@ -149,12 +190,18 @@ async function handleAICall(request, sendResponse) {
                 console.log("Calling DeepSeek Reasoner API with model:", model);
                 apiResponse = await callDeepSeekReasoner(prompt, currentApiKey, 8192); // Added token limit
                 break;
-            // REMOVED: Cases for Gemini models are removed
+            case 'gemini-2.0-flash':
+            case 'gemini-2.0-flash-lite':
+                currentApiKey = geminiApiKey;
+                if (!currentApiKey) throw new Error('Gemini API key not configured');
+                console.log("Calling Gemini API with model:", model);
+                apiResponse = await callGemini(prompt, model, currentApiKey, 8192);
+                break;
             default:
                 throw new Error(`Model "${model}" not supported.`);
         }
 
-        console.log("API call successful, response:", apiResponse); // Debug log - successful API call
+        console.log("API call successful, response:", apiResponse);
         sendResponse({ result: apiResponse });
 
     } catch (error) {
@@ -308,7 +355,8 @@ async function callGrok(prompt, modelName, apiKey, maxTokens) {
             body: JSON.stringify({
                 model: modelName, // "grok-2"
                 messages: [{ role: "user", content: prompt }],
-                max_tokens: maxTokens // Use the maxTokens parameter
+                max_tokens: maxTokens, // Use the maxTokens parameter
+                response_format: { type: "text" }
                 // No temperature or other params needed for basic compatibility
             })
         });
@@ -316,7 +364,8 @@ async function callGrok(prompt, modelName, apiKey, maxTokens) {
         console.log("Grok Request Body:", JSON.stringify({
             model: modelName,
             messages: [{ role: "user", content: prompt }],
-            max_tokens: maxTokens
+            max_tokens: maxTokens,
+            response_format: { type: "text" }
         }));
         console.log("Grok Request Headers:", {
             'Content-Type': 'application/json',
@@ -338,6 +387,38 @@ async function callGrok(prompt, modelName, apiKey, maxTokens) {
     }
 }
 
+// Add Gemini API call function
+async function callGemini(prompt, model, apiKey, maxTokens) {
+    try {
+        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    { role: "user", content: prompt }
+                ],
+                max_tokens: maxTokens,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Gemini API Error Response:", errorData);
+            throw new Error(errorData.error?.message || 'Gemini API request failed');
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    } catch (error) {
+        console.error("Error in callGemini:", error);
+        throw error;
+    }
+}
 
 function generatePrompt(text, personality) {
     return new Promise((resolve) => {
@@ -382,6 +463,11 @@ async function handleStreamingAICall(request, port) {
             case 'deepseek-reasoner':
                 if (!deepseekApiKey) throw new Error('DeepSeek API key not configured');
                 stream = await streamDeepSeek(prompt, model, deepseekApiKey, controller.signal);
+                break;
+            case 'gemini-2.0-flash':
+            case 'gemini-2.0-flash-lite':
+                if (!geminiApiKey) throw new Error('Gemini API key not configured');
+                stream = await streamGemini(prompt, model, geminiApiKey, controller.signal);
                 break;
             default:
                 throw new Error(`Model "${model}" not supported.`);
@@ -609,8 +695,7 @@ async function* streamGrok(prompt, model, apiKey, signal) {
         max_tokens: 8192,
         presence_penalty: 0,
         frequency_penalty: 0,
-        n: 1,
-        response_format: { type: "text" }
+        n: 1
     };
 
     try {
@@ -633,7 +718,7 @@ async function* streamGrok(prompt, model, apiKey, signal) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        let backoffTime = 1000; // Start with 1s backoff
+        let backoffTime = 1000;
         let retryCount = 0;
         const maxRetries = 3;
 
@@ -653,21 +738,22 @@ async function* streamGrok(prompt, model, apiKey, signal) {
                             if (data === '[DONE]') continue;
                             try {
                                 const json = JSON.parse(data);
-                                const content = json.choices[0]?.delta?.content;
+                                // Handle both streaming and non-streaming responses
+                                const content = json.choices?.[0]?.delta?.content || json.choices?.[0]?.message?.content;
                                 if (content) {
-                                    backoffTime = 1000; // Reset backoff on successful chunk
-                                    retryCount = 0; // Reset retry count on success
+                                    backoffTime = 1000;
+                                    retryCount = 0;
                                     yield content;
                                 }
                             } catch (e) {
                                 console.error('Error parsing xAI stream chunk:', e);
+                                console.error('Raw chunk data:', data);
                                 retryCount++;
                                 if (retryCount > maxRetries) {
                                     throw new Error('Max retries exceeded for chunk parsing');
                                 }
-                                // Exponential backoff on parse error
                                 await new Promise(resolve => setTimeout(resolve, backoffTime));
-                                backoffTime = Math.min(backoffTime * 2, 32000); // Max 32s backoff
+                                backoffTime = Math.min(backoffTime * 2, 32000);
                             }
                         }
                     }
@@ -679,6 +765,76 @@ async function* streamGrok(prompt, model, apiKey, signal) {
                     retryCount++;
                     await new Promise(resolve => setTimeout(resolve, backoffTime));
                     backoffTime = Math.min(backoffTime * 2, 32000);
+                }
+            }
+        } finally {
+            reader.releaseLock();
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw new Error('Request was cancelled');
+        }
+        throw error;
+    }
+}
+
+async function* streamGemini(prompt, model, apiKey, signal) {
+    try {
+        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    { role: "user", content: prompt }
+                ],
+                stream: true,
+                max_tokens: 8192,
+                temperature: 0.7
+            }),
+            signal
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Gemini API Error Response:", errorData);
+            throw new Error(errorData.error?.message || 'Gemini API request failed');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let backoffTime = 1000;
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6);
+                        if (data === '[DONE]') continue;
+                        try {
+                            const json = JSON.parse(data);
+                            const content = json.choices[0]?.delta?.content;
+                            if (content) {
+                                backoffTime = 1000;
+                                yield content;
+                            }
+                        } catch (e) {
+                            console.error('Error parsing Gemini stream chunk:', e);
+                            await new Promise(resolve => setTimeout(resolve, backoffTime));
+                            backoffTime = Math.min(backoffTime * 2, 32000);
+                        }
+                    }
                 }
             }
         } finally {
