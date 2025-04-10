@@ -1083,8 +1083,9 @@ IMPORTANT: Use only plain text in your response - no special characters, no form
         const openaiApiKey = document.getElementById('openai-api-key').value.trim();
         const deepseekApiKey = document.getElementById('deepseek-api-key').value.trim();
         const grokApiKey = document.getElementById('grok-api-key').value.trim();
+        const geminiApiKey = document.getElementById('gemini-api-key').value.trim();
 
-        chrome.storage.sync.set({ openaiApiKey, deepseekApiKey, grokApiKey }, () => {
+        chrome.storage.sync.set({ openaiApiKey, deepseekApiKey, grokApiKey, geminiApiKey }, () => {
             alert('API keys saved successfully!');
             chrome.runtime.sendMessage({ action: "reloadApiKeys" });
             loadAvailableModels(); // Reload models after API keys change

@@ -9,7 +9,7 @@ Context Weaver is a powerful Chrome extension that brings AI-powered text transf
 - **Multi-Model Support**: Choose between different AI models:
   - OpenAI GPT-4 and variants
   - DeepSeek Chat and Reasoner
-  - Grok
+  - Grok (including Grok-3-beta)
   - More models coming soon (Anthropic, Perplexity)
 
 ### Customizable Archetypes
@@ -99,7 +99,7 @@ Context Weaver is a powerful Chrome extension that brings AI-powered text transf
 ### API Keys
 - OpenAI API key for GPT models
 - DeepSeek API key for Chat and Reasoner
-- Grok API key for xAI models
+- Grok API key for xAI models (supports both Grok-2 and Grok-3-beta)
 - More providers coming soon
 
 ### Customization

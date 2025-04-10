@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "name": "Context Weaver",
-    "version": "2.0.0",
-    "description": "AI-Powered Web Companion - Simply highlight text to chat in browser with GPT, DeepSeek, or Grok!",
+    "version": "2.1.2",
+    "description": "AI-Powered Web Companion - Highlight text to chat with Gemini, GPT, Grok, or DeepSeek directly in your browser!",
     "permissions": ["storage", "contextMenus"],
     "action": {
         "default_popup": "popup/popup.html",
@@ -27,7 +27,13 @@
         "128": "icons/icon128.png"
     },
     "web_accessible_resources": [{
-        "resources": ["popup/rightclick.css"],
+        "resources": [
+            "popup/rightclick.css",
+            "icons/ailogos/OpenAI200.png",
+            "icons/ailogos/Gemini200.png",
+            "icons/ailogos/deepseek200.png",
+            "icons/ailogos/grok200.png"
+        ],
         "matches": ["<all_urls>"]
     }]
 }

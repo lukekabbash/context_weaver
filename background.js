@@ -53,7 +53,8 @@ function generateModelList() {
                     { value: 'o1-mini-2024-09-12', name: 'o1 mini (OpenAI)'}
                 ] : [],
                 'xAI': grokApiKey ? [
-                    { value: 'grok-2', name: 'Grok-2 (xAI)' }
+                    { value: 'grok-2', name: 'Grok-2 (xAI)' },
+                    { value: 'grok-3-beta', name: 'Grok-3 Beta (xAI)' }
                 ] : [],
                 'DeepSeek': deepseekApiKey ? [
                     { value: 'deepseek-chat', name: 'V3 Chat (DeepSeek)' },
@@ -203,6 +204,12 @@ async function handleAICall(request, sendResponse) {
                 if (!currentApiKey) throw new Error('Grok API key not configured');
                 console.log("Calling Grok API with model:", model);
                 apiResponse = await callGrok(prompt, "grok-2", currentApiKey, 8192); // Added token limit
+                break;
+            case 'grok-3-beta':
+                currentApiKey = grokApiKey;
+                if (!currentApiKey) throw new Error('Grok API key not configured');
+                console.log("Calling Grok API with model:", model);
+                apiResponse = await callGrok(prompt, "grok-3-beta", currentApiKey, 8192); // Added token limit
                 break;
             case 'deepseek-chat':
                 currentApiKey = deepseekApiKey;
@@ -482,6 +489,10 @@ async function handleStreamingAICall(request, port) {
                 stream = await streamOpenAI(prompt, model, openaiApiKey, controller.signal);
                 break;
             case 'grok-2':
+                if (!grokApiKey) throw new Error('Grok API key not configured');
+                stream = await streamGrok(prompt, model, grokApiKey, controller.signal);
+                break;
+            case 'grok-3-beta':
                 if (!grokApiKey) throw new Error('Grok API key not configured');
                 stream = await streamGrok(prompt, model, grokApiKey, controller.signal);
                 break;
